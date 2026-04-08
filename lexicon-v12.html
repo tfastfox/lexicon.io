@@ -1,0 +1,1938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LEXICON — Word Game</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#05050f;--s1:#0c0c20;--s2:#121228;--s3:#1a1a35;
+  --cyan:#00e5cc;--gold:#ffc940;--pink:#ff4d8f;--dim:#4a4a7a;
+  --txt:#d8d8f0;--txtd:#7070a0;--err:#ff3355;--ok:#33ff88;
+  --bord:#1e1e40;--pur:#9b59ff;
+}
+body{background:var(--bg);color:var(--txt);font-family:'Space Mono',monospace;min-height:100vh;
+  background-image:radial-gradient(ellipse 80% 40% at 20% 60%,rgba(0,80,120,.13) 0%,transparent 70%),
+  radial-gradient(ellipse 60% 50% at 80% 20%,rgba(60,0,100,.12) 0%,transparent 70%)}
+#root{min-height:100vh;display:flex;justify-content:center;align-items:flex-start;padding:20px 16px 60px}
+.app{width:100%;max-width:740px}
+.orb{font-family:'Orbitron',sans-serif}
+.t-title{font-family:'Orbitron',sans-serif;font-weight:900;letter-spacing:.05em}
+.t-head{font-family:'Orbitron',sans-serif;font-weight:700;letter-spacing:.07em}
+.t-lbl{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--txtd)}
+.panel{background:var(--s1);border:1px solid var(--bord);border-radius:12px;padding:22px}
+.inner{background:var(--s2);border:1px solid var(--bord);border-radius:8px;padding:14px}
+/* BUTTONS */
+.btn{font-family:'Orbitron',sans-serif;font-weight:700;font-size:12px;letter-spacing:.09em;
+  padding:10px 20px;border-radius:8px;border:none;cursor:pointer;transition:all .14s;
+  display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn-p{background:var(--cyan);color:#000;box-shadow:0 0 16px rgba(0,229,204,.28)}
+.btn-p:hover{background:#00ffdd;box-shadow:0 0 24px rgba(0,229,204,.45);transform:translateY(-1px)}
+.btn-g{background:var(--gold);color:#000;box-shadow:0 0 16px rgba(255,201,64,.28)}
+.btn-g:hover{background:#ffd966;transform:translateY(-1px)}
+.btn-v{background:var(--pur);color:#fff;box-shadow:0 0 16px rgba(155,89,255,.28)}
+.btn-v:hover{background:#b06aff;transform:translateY(-1px)}
+.btn-o{background:transparent;color:var(--txtd);border:1.5px solid var(--bord)}
+.btn-o:hover{color:var(--txt);border-color:var(--dim)}
+.btn-s{background:transparent;color:var(--cyan);border:1.5px solid var(--cyan)}
+.btn-s:hover{background:rgba(0,229,204,.09)}
+.btn-d{background:transparent;color:var(--err);border:1.5px solid rgba(255,51,85,.35)}
+.btn-d:hover{background:rgba(255,51,85,.09)}
+.btn:disabled{opacity:.35;cursor:not-allowed;transform:none!important;box-shadow:none!important}
+.sm{font-size:10px;padding:7px 13px;border-radius:6px}
+.lg{font-size:14px;padding:14px 32px;border-radius:10px}
+.fw{width:100%}
+/* INPUTS */
+.inp{background:var(--s3);border:1.5px solid var(--bord);color:var(--txt);
+  font-family:'Space Mono',monospace;font-size:16px;padding:11px 14px;
+  border-radius:8px;width:100%;transition:border-color .14s;outline:none}
+.inp:focus{border-color:var(--cyan)}.inp::placeholder{color:var(--dim)}
+.inp.ie{border-color:var(--err)}.inp.iok{border-color:var(--ok)}
+.bst{width:100%;min-height:68px;background:var(--s3);border:1.5px solid var(--bord);
+  border-radius:8px;color:var(--txt);font-family:'Space Mono',monospace;font-size:13px;
+  padding:9px 12px;outline:none;resize:vertical;line-height:1.65;transition:border-color .14s}
+.bst:focus{border-color:var(--gold)}.bst::placeholder{color:var(--dim)}
+/* GUESS ROW */
+.grow{display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:8px;
+  background:var(--s2);border:1px solid var(--bord);animation:slideIn .16s ease-out}
+.gword{font-family:'Space Mono',monospace;font-size:14px;font-weight:700;flex:1;
+  letter-spacing:.04em;text-transform:uppercase}
+.gcnt{font-family:'Orbitron',sans-serif;font-weight:700;font-size:18px;min-width:40px;text-align:right}
+.c0{color:var(--dim)}.clo{color:var(--pink)}.cmi{color:var(--gold)}.chi{color:var(--ok)}
+/* LETTER GRID */
+.agrid{display:grid;grid-template-columns:repeat(13,1fr);gap:4px}
+.atile{aspect-ratio:1;display:flex;align-items:center;justify-content:center;
+  background:var(--s3);border:1.5px solid var(--bord);border-radius:5px;cursor:pointer;
+  font-family:'Orbitron',sans-serif;font-weight:700;font-size:10px;color:var(--cyan);
+  user-select:none;transition:all .09s}
+.atile:hover{border-color:var(--cyan);background:rgba(0,229,204,.07)}
+.atile.struck{background:rgba(40,0,15,.18);border-color:rgba(255,51,85,.35);
+  color:rgba(255,51,85,.45);text-decoration:line-through;opacity:.55}
+.atile.circled{
+  background:rgba(51,255,136,.09);
+  border:2px solid var(--ok);
+  color:var(--ok);
+  box-shadow:0 0 0 2px rgba(51,255,136,.25);
+  font-weight:900}
+/* BADGES */
+.bdg{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:10px;
+  font-weight:700;font-family:'Orbitron',sans-serif;letter-spacing:.09em}
+.bc{background:rgba(0,229,204,.12);color:var(--cyan);border:1px solid rgba(0,229,204,.28)}
+.bg{background:rgba(255,201,64,.12);color:var(--gold);border:1px solid rgba(255,201,64,.28)}
+.bok{background:rgba(51,255,136,.12);color:var(--ok);border:1px solid rgba(51,255,136,.28)}
+.be{background:rgba(255,51,85,.12);color:var(--err);border:1px solid rgba(255,51,85,.28)}
+.bv{background:rgba(155,89,255,.12);color:var(--pur);border:1px solid rgba(155,89,255,.28)}
+/* NOTICES */
+.ntc{padding:10px 12px;border-radius:8px;font-size:12px;line-height:1.6}
+.ne{background:rgba(255,51,85,.07);border:1px solid rgba(255,51,85,.22);color:#ff8899}
+.nok{background:rgba(51,255,136,.07);border:1px solid rgba(51,255,136,.22);color:#33ff88}
+.ni{background:rgba(0,229,204,.05);border:1px solid rgba(0,229,204,.18);color:#88dddd}
+.nw{background:rgba(255,201,64,.05);border:1px solid rgba(255,201,64,.18);color:var(--gold)}
+.nv{background:rgba(155,89,255,.07);border:1px solid rgba(155,89,255,.22);color:#c89aff}
+/* LETTER BOXES */
+.lbox{width:30px;height:30px;border:2px solid var(--bord);border-radius:5px;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700}
+.lbox.rev{border-color:var(--ok);background:rgba(51,255,136,.1);color:var(--ok)}
+.lbox.dly{border-color:var(--pur);background:rgba(155,89,255,.1);color:var(--pur)}
+/* LEVEL GRID */
+.lgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.lbtn{background:var(--s2);border:1.5px solid var(--bord);border-radius:9px;
+  padding:12px 5px;text-align:center;cursor:pointer;transition:all .13s}
+.lbtn:hover{border-color:var(--cyan);background:rgba(0,229,204,.04);transform:translateY(-2px)}
+.lnum{font-family:'Orbitron',sans-serif;font-weight:900;font-size:19px;color:var(--cyan)}
+.ldsc{font-size:9px;letter-spacing:.06em;color:var(--txtd);margin-top:3px;line-height:1.4}
+/* PLAYER CARD */
+.pcard{background:var(--s2);border:1px solid var(--bord);border-radius:10px;padding:11px 15px}
+.pcard.me{border-color:var(--cyan);background:rgba(0,229,204,.03)}
+.pcard.pw{border-color:var(--ok)}
+.pnum{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-family:'Orbitron',sans-serif;font-weight:700;font-size:10px;background:var(--s3);border:1.5px solid var(--bord)}
+.pnum.mi{background:rgba(0,229,204,.17);border-color:var(--cyan);color:var(--cyan)}
+/* STATS */
+.sgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.scard{background:var(--s2);border:1px solid var(--bord);border-radius:10px;padding:14px 16px}
+.sval{font-family:'Orbitron',sans-serif;font-weight:900;font-size:26px;margin-bottom:3px}
+.slbl{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--txtd)}
+/* LEADERBOARD */
+.lbrow{display:flex;align-items:center;gap:12px;padding:10px 14px;
+  background:var(--s2);border:1px solid var(--bord);border-radius:9px}
+.lbrow.top{border-color:var(--gold);background:rgba(255,201,64,.04)}
+.lbrow.mrow{border-color:var(--cyan);background:rgba(0,229,204,.04)}
+.lbrnk{font-family:'Orbitron',sans-serif;font-weight:900;font-size:15px;min-width:28px;text-align:center;color:var(--dim)}
+.rg{color:var(--gold)}.rs{color:#aac}.rb{color:#c96}
+/* DAILY CARD */
+.dcard{background:linear-gradient(135deg,rgba(155,89,255,.12),rgba(0,229,204,.06));
+  border:1.5px solid rgba(155,89,255,.35);border-radius:12px;padding:18px}
+/* AVATAR */
+.avtr{width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-family:'Orbitron',sans-serif;font-weight:900;font-size:26px;
+  background:linear-gradient(135deg,rgba(0,229,204,.22),rgba(155,89,255,.22));
+  border:2px solid var(--cyan);flex-shrink:0}
+/* ROOM CODE */
+.rcode{font-family:'Orbitron',sans-serif;font-weight:900;font-size:32px;
+  letter-spacing:.22em;color:var(--gold);text-shadow:0 0 18px rgba(255,201,64,.32)}
+/* ANIMATIONS */
+@keyframes slideIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes glow{0%,100%{text-shadow:0 0 10px var(--cyan)}50%{text-shadow:0 0 26px var(--cyan),0 0 50px var(--cyan)}}
+@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.ag{animation:glow 2.5s ease-in-out infinite}
+.ap{animation:pulse 1.5s ease-in-out infinite}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid var(--bord);
+  border-top-color:var(--cyan);border-radius:50%;animation:spin .5s linear infinite}
+/* FLEX UTILS */
+.row{display:flex}.col{display:flex;flex-direction:column}
+.ac{align-items:center}.jb{justify-content:space-between}.jc{justify-content:center}
+.tc{text-align:center}.w100{width:100%}.wrap{flex-wrap:wrap}
+.g4{gap:4px}.g6{gap:6px}.g8{gap:8px}.g10{gap:10px}.g12{gap:12px}.g16{gap:16px}.g20{gap:20px}
+.mt6{margin-top:6px}.mt8{margin-top:8px}.mt10{margin-top:10px}
+.mt12{margin-top:12px}.mt16{margin-top:16px}.mt20{margin-top:20px}.mt24{margin-top:24px}
+.mb6{margin-bottom:6px}.mb8{margin-bottom:8px}.mb10{margin-bottom:10px}
+.mb12{margin-bottom:12px}.mb16{margin-bottom:16px}
+.div{height:1px;background:var(--bord);margin:16px 0}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0}
+.dok{background:var(--ok);box-shadow:0 0 6px var(--ok)}.ddim{background:var(--dim)}
+.dpul{background:var(--gold);animation:pulse 1.3s ease-in-out infinite}
+.nav{display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;gap:8px}
+@media(max-width:520px){
+  .lgrid{grid-template-columns:repeat(3,1fr)}
+  .agrid{grid-template-columns:repeat(9,1fr)}
+  .sgrid{grid-template-columns:1fr}.panel{padding:16px}
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<!--
+  ════════════════════════════════════════════════════════
+  LEXICON v3 · CONFIG
+
+  ① MERRIAM-WEBSTER DICTIONARY API (recommended)
+     Free tier: 1,000 lookups/day
+     1. Register at https://dictionaryapi.com/register/index
+     2. Request the "Collegiate Dictionary" product
+     3. Copy your key into LEXICON_MW_KEY below
+     Without a key the game falls back to dictionaryapi.dev.
+
+  ② FIREBASE (Multiplayer · Leaderboard · Cloud Stats)
+     Solo works without Firebase.
+     1. https://console.firebase.google.com → Add project
+     2. Build → Realtime Database → Create → Test mode → Enable
+     3. Project Settings ⚙ → Web app </> → Register → copy config
+  ════════════════════════════════════════════════════════
+-->
+<script>
+// ① Merriam-Webster Collegiate Dictionary API key
+window.LEXICON_MW_KEY = "704b40d2-3c9b-4dd6-bcc8-f49f68e7b5b5";   // replace with your key
+
+// ② Firebase config
+window.LEXICON_FB = {
+  apiKey: "AIzaSyD0Dv0Ci1Dv6ewPm9GoWYuBMzuprtI3iUc",
+  authDomain: "lexicon-d3b18.firebaseapp.com",
+  databaseURL: "https://lexicon-d3b18-default-rtdb.firebaseio.com",
+  projectId: "lexicon-d3b18",
+  storageBucket: "lexicon-d3b18.firebasestorage.app",
+  messagingSenderId: "3619214666",
+  appId: "1:3619214666:web:a19eee757c9cd5155d1db3"
+};
+</script>
+<script type="text/babel">
+const {useState,useEffect,useRef,useCallback}=React;
+
+// ── Firebase init ─────────────────────────────────────────────
+let db=null,FB_READY=false;
+try{
+  const c=window.LEXICON_FB;
+  if(c?.apiKey!=='YOUR_API_KEY'&&!c?.databaseURL?.includes('YOUR_')){
+    firebase.initializeApp(c);db=firebase.database();FB_READY=true;
+  }
+}catch(e){console.warn('Firebase:',e.message);}
+
+// ── Player identity (localStorage, permanent) ─────────────────
+// Username-as-login: MY_ID = normalized username key.
+function toKey(n){return n.trim().toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"");}
+let MY_ID=(()=>{
+  const n=localStorage.getItem("lx_name");
+  if(n&&n.trim())return toKey(n);
+  let id=localStorage.getItem("lx_pid");
+  if(!id){id="p"+Math.random().toString(36).substr(2,9)+Date.now().toString(36).substr(-4);localStorage.setItem("lx_pid",id);}
+  return id;
+})();
+function applyUsername(name){MY_ID=toKey(name);localStorage.setItem("lx_name",name.trim());}
+
+// ── Core helpers ──────────────────────────────────────────────
+function countShared(a,b){
+  const c1={},c2={};
+  for(const ch of a.toLowerCase())c1[ch]=(c1[ch]||0)+1;
+  for(const ch of b.toLowerCase())c2[ch]=(c2[ch]||0)+1;
+  let s=0;for(const ch in c1)if(c2[ch])s+=Math.min(c1[ch],c2[ch]);return s;
+}
+function shuffle(arr){const a=[...arr];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function genCode(){const ch='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';return Array.from({length:6},()=>ch[Math.floor(Math.random()*ch.length)]).join('');}
+function cc(n){return n===0?'c0':n<=2?'clo':n<=5?'cmi':'chi';}
+function todayStr(){
+  const estOffsetMs = 6 * 60 * 60 * 1000; // UTC-6
+  const estNow = new Date(Date.now() - estOffsetMs);
+  return estNow.toISOString().slice(0,10);}
+function yesterdayStr(){const d=new Date();d.setDate(d.getDate()-1);return d.toISOString().slice(0,10);}
+
+// ── Daily word (deterministic hash of date string) ────────────
+const DAILY_POOL=[
+  'crystal','station','journey','balance','fortune','cluster','gravity','thunder','lantern','shimmer',
+  'beneath','ancient','capture','freedom','harvest','kindred','morning','pattern','quantum','radiant',
+  'shelter','twisted','velvet','wander','zenith','blister','crumble','elegant','fathom','gilded',
+  'hostile','insight','kestrel','phantom','quarrel','scandal','tangled','alchemy','bramble','cascade',
+  'frenzy','grapple','haunted','jubilee','lattice','mosaic','tempest','vortex','warble','zealous',
+  'abandon','cobweb','eclipse','fervent','glacier','herald','impasse','jangle','knuckle','lament',
+  'marshal','neglect','prowess','riddle','satchel','vagrant','wrangle','brandish','crimson','embroil',
+  'garnish','hallowed','ignite','kindling','lustrous','nectarine','offstage','parsnip','quartzite',
+  'rampart','seismic','tableau','unkempt','volcanic','watershed','yearlong','zeppelin','absinthe',
+  'brocade','crevice','driftwood','embargo','fastened','grounded','hatchery','immense','jealousy',
+];
+function hashDate(s){let h=0;for(let i=0;i<s.length;i++)h=(Math.imul(31,h)+s.charCodeAt(i))|0;return Math.abs(h);}
+function getDailyWord(d){return DAILY_POOL[hashDate(d)%DAILY_POOL.length];}
+
+// ── Word validation (Merriam-Webster Collegiate + fallback + allowlist) ─
+// Common grammatical words that APIs sometimes reject (is, was, are, etc.)
+const WORD_ALLOWLIST=new Set([
+  'been','came','come','does','done','each','from','gave','give','goes',
+  'gone','have','here','just','keep','know','last','left','like','look',
+  'made','make','more','most','much','must','name','need','next','once',
+  'only','open','over','said','same','seem','show','some','such','take',
+  'tell','than','that','them','then','they','this','time','very','want',
+  'were','what','when','will','with','your',
+]);
+const MW_KEY=window.LEXICON_MW_KEY;
+const MW_READY=MW_KEY&&MW_KEY!=='YOUR_MW_KEY';
+
+async function validateWord(word){
+  const w=word.toLowerCase().trim();
+  if(!/^[a-z]+$/.test(w))return{valid:false,reason:'Letters only'};
+  if(w.length<2)return{valid:false,reason:'Too short'};
+  // Always accept core grammatical words the dictionary API may reject
+  if(WORD_ALLOWLIST.has(w))return{valid:true,reason:''};
+  try{
+    if(MW_READY){
+      // Merriam-Webster Collegiate Dictionary API
+      const r=await fetch(`https://www.dictionaryapi.com/api/v3/references/collegiate/json/${w}?key=${MW_KEY}`);
+      if(!r.ok)throw new Error('MW unavailable');
+      const data=await r.json();
+      // Valid = array of entry objects; invalid = array of suggestion strings or []
+      if(Array.isArray(data)&&data.length>0&&typeof data[0]==='object'){
+        return{valid:true,reason:''};
+      }
+      return{valid:false,reason:`"${w}" not found in Merriam-Webster`};
+    }else{
+      // Fallback: dictionaryapi.dev (Wiktionary-based)
+      const r=await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${w}`);
+      if(r.status===404)return{valid:false,reason:`"${w}" not in dictionary`};
+      if(!r.ok)throw new Error('API error');
+      return{valid:true,reason:''};
+    }
+  }catch(e){return{valid:true,reason:'(offline – skipped check)'};}
+}
+// ── Word lists ────────────────────────────────────────────────
+const W={
+  4:['able','back','ball','bank','bell','bird','blue','bold','book','burn','cake','call','card','cave',
+     'clay','coal','coat','cold','core','corn','dark','dawn','desk','dive','dock','dome','door','dusk',
+     'dust','edge','face','fact','fair','fall','fame','farm','fast','fate','fill','film','find','fire',
+     'firm','fish','flag','flat','flip','flow','foam','fold','folk','fond','food','foot','fork','form',
+     'fort','free','frog','fuel','full','fund','gain','gale','game','gate','gear','gift','give','glad',
+     'glow','glue','goal','goat','gold','good','grab','gray','grid','grin','grip','grow','gulf','gust',
+     'halt','hand','hang','hard','hare','harm','hate','head','heal','heat','heel','help','hide','high',
+     'hill','hint','hold','hole','home','hope','horn','huge','hull','hunt','hurt','idle','iron','jest',
+     'join','joke','jump','keen','keep','kill','kind','king','kiss','knot','lace','lack','land','lane',
+     'last','late','lava','lawn','lead','leaf','lean','leap','lend','lime','line','link','lion','live',
+     'load','lock','loft','long','lore','lose','lush','lust','made','mail','main','make','male','mane',
+     'mark','mate','maze','meal','mean','meat','meet','melt','mild','milk','mill','mint','mist','mode',
+     'mold','moon','more','moss','move','myth','nail','name','nest','note','open','oven','pace','page',
+     'pain','pale','palm','park','past','path','peak','peel','pick','pile','pine','pipe','plan','play',
+     'plot','plug','plum','poem','pole','pond','pool','port','pose','pull','pure','push','race','rack',
+     'rage','rain','rank','rate','read','real','reef','rent','ripe','rise','risk','road','roam','roar',
+     'robe','rock','role','roll','roof','root','rope','rose','rule','rush','rust','sage','sail','salt',
+     'sand','save','seal','seed','seek','send','shed','ship','shop','show','shut','silk','sing','sink',
+     'site','size','slim','slip','slow','snap','snow','soap','soft','soil','sole','song','sore','soul',
+     'star','stem','step','stop','tale','tall','tame','tank','tape','teal','team','tide','tile','tilt',
+     'toll','tome','tone','town','tree','trek','trim','trio','trip','twig','twin','type','vale','vane',
+     'vase','vast','veil','vein','view','vine','void','vote','wade','wake','walk','wall','ward','warm',
+     'wash','wasp','wave','weed','well','wide','wife','will','wind','wine','wire','wolf','wood','wool',
+     'word','work','wren','yard','year','zone'],
+  5:['abbey','acorn','actor','alone','angel','angle','ankle','arena','armor','aroma','ashen','attic',
+     'awake','award','aware','bacon','badge','beach','beard','beast','bench','birch','black','blade',
+     'bland','blank','blaze','bleak','blend','bless','bliss','block','blood','blown','blunt','board',
+     'boast','bonus','brace','braid','brain','brave','brawn','bread','break','breed','bride','brief',
+     'brine','brink','brook','broom','broth','brown','brush','brute','bunch','cabin','camel','candy',
+     'canoe','cargo','carry','catch','cedar','chain','chair','chalk','charm','chart','chasm','cheap',
+     'cheek','cheer','chess','chest','chief','child','chill','churn','civil','clang','clash','clasp',
+     'class','clean','clear','click','cliff','cloak','clone','close','cloth','cloud','clown','clump',
+     'coast','comet','comic','coral','couch','cough','count','cover','crack','crank','crash','crave',
+     'crawl','cream','creek','crest','crime','crisp','cross','crowd','crown','crush','crust','curve',
+     'cycle','daily','dairy','daisy','dance','delay','dense','depth','devil','digit','dodge','doubt',
+     'dough','dozen','draft','drain','drape','drawl','drawn','dread','dream','dress','drift','drink',
+     'drive','droop','drove','drown','dwarf','dwell','eagle','earth','eight','elder','elite','elbow',
+     'ember','entry','erupt','ethic','evade','exact','extra','fable','faith','fancy','feast','fence',
+     'fever','flair','flame','flask','flock','flood','floor','flora','flour','flute','foray','forge',
+     'forum','frail','frame','fraud','fresh','front','frost','fruit','gauge','ghost','giant','gland',
+     'glare','gleam','glide','gloom','gourd','grace','grade','grain','grand','grant','graph','grasp',
+     'grave','graze','greed','green','grief','grime','grind','groan','groom','grove','growl','guide',
+     'guile','gusto','haste','haunt','haven','hedge','helix','heron','hoist','honey','honor','horde',
+     'hover','human','humid','image','ingot','inlet','irony','jewel','juice','jumbo','knave','kneel',
+     'knife','knock','known','ladle','lance','layer','learn','ledge','lemon','level','lever','light',
+     'liner','liver','lodge','logic','lotus','lucky','lunar','lyric','magic','manor','maple','match',
+     'mercy','merit','metal','mirth','model','money','month','moral','motif','motor','mound','mount',
+     'mourn','mouse','mouth','mulch','mural','music','naive','naval','nerve','night','noble','nudge',
+     'oasis','ocean','olive','orbit','organ','otter','panel','panic','paper','pasta','patch','pause',
+     'peach','pearl','phase','piece','pilot','pixel','place','plain','plane','plank','plant','plaza',
+     'plead','pluck','plumb','plume','poker','poppy','pound','power','prank','press','price','pride',
+     'prime','print','probe','proof','prose','prowl','pulse','punch','pupil','purge','queen','query',
+     'quest','quill','quirk','quote','radar','raven','reach','realm','rebel','regal','reign','relax',
+     'relic','resin','rhyme','rider','ridge','rifle','river','rivet','robot','rocky','rouge','rough',
+     'round','rowdy','royal','rugby','rural','rusty','sauce','scale','scare','scene','scone','scoop',
+     'scope','score','scout','seize','serve','seven','shade','shaft','shake','shame','shape','share',
+     'shark','sharp','sheen','sheep','shelf','shell','shift','shirt','shock','shore','shout','shove',
+     'sight','sinew','skate','skill','skull','slant','sleek','sleep','slide','sloth','smack','smart',
+     'smear','smell','smile','smoke','snack','snail','snake','snare','sneak','solar','solid','solve',
+     'south','space','spare','spark','spawn','speak','spear','speed','spell','spend','spice','spill',
+     'spine','split','spoke','sport','spray','squad','stack','stain','stale','stand','stare','start',
+     'state','steal','steam','steel','steer','stick','stiff','still','sting','stomp','stool','store',
+     'storm','stout','stove','strap','straw','stray','strip','stump','style','sugar','surge','swamp',
+     'swear','sweep','sweet','swift','sword','syrup','table','talon','taunt','tempo','thorn','thumb',
+     'tiger','tight','timer','titan','toast','token','torch','touch','tough','trace','track','trade',
+     'trail','train','trait','tramp','trend','trick','troop','trout','truce','truly','trunk','trust',
+     'truth','tulip','tutor','tweak','twice','twirl','twist','uncle','under','union','until','upset',
+     'urban','usher','usual','vague','valid','valor','value','valve','vapor','vault','vigil','viral',
+     'virus','visor','vital','vixen','vocal','voice','vouch','vowel','wager','waste','watch','water',
+     'weary','weave','wedge','weird','whale','wheat','wheel','where','white','whole','winch','witch',
+     'world','worry','worth','wound','wrath','wreck','wrist','zebra'],
+  6:['ablaze','accent','access','afford','agenda','anchor','annual','answer','antler','appeal','armory',
+     'auburn','autumn','avenue','badger','bamboo','bandit','banter','barrel','battle','beacon','beaker',
+     'beetle','blight','bottle','bounce','branch','breach','bridge','broken','buckle','budget','burden',
+     'burrow','button','cactus','candle','canyon','castle','cattle','cavern','cellar','census','chance',
+     'change','charge','circle','clover','cobweb','combat','commit','convoy','copper','corner','cotton',
+     'couple','coyote','cradle','crafty','crocus','cuddle','cursor','custom','dagger','damage','danger',
+     'debris','decade','define','differ','dinner','divide','donkey','dollar','domain','dragon','driven',
+     'dynamo','easily','effect','empire','enable','endure','energy','engage','enough','errand','escape',
+     'evolve','exceed','expand','exotic','extend','famine','fathom','feisty','fierce','filter','finger',
+     'finite','fisher','flawed','flower','forage','forest','fossil','frenzy','frozen','gadget','garlic',
+     'gentle','geyser','giggle','gilded','ginger','glider','global','golden','gospel','gothic','gravel',
+     'grotto','grudge','hammer','hamper','harbor','herald','hermit','hidden','hollow','honest','hornet',
+     'huddle','humble','hunger','hunter','hustle','immune','import','impose','inborn','income','invest',
+     'island','jungle','kernel','kitten','knight','lament','lavish','lawful','lawyer','legend','lethal',
+     'lively','lizard','locust','lovely','lunacy','manage','mantle','marble','market','meadow','mellow',
+     'menace','mentor','mental','method','midday','mighty','mingle','misery','mitten','modern','modest',
+     'monkey','mosaic','mother','muddle','mussel','muster','nature','needle','nestle','nettle','nickel',
+     'nimble','noodle','object','oblong','obtain','oddity','offend','onward','ordeal','origin','output',
+     'oyster','parcel','parrot','patrol','patter','pellet','pencil','pepper','permit','person','petrol',
+     'pillar','pirate','planet','player','please','pocket','poison','potter','powder','prefer','pretty',
+     'priest','primer','prison','proper','proven','puddle','purple','puzzle','python','rabbit','racket',
+     'radish','random','reckon','reduce','remark','repair','rescue','resign','result','revolt','riddle',
+     'rising','rotten','rugged','rustle','saddle','salmon','sample','scarce','settle','shadow','shovel',
+     'shrink','signal','simple','single','sketch','skinny','smooth','snooze','soothe','sorrow','speech',
+     'spider','sponge','sprint','stable','statue','steady','stolen','strain','stream','street','strict',
+     'stroke','strong','suffer','summer','summon','supply','switch','symbol','tactic','talent','tavern',
+     'temper','tender','theory','thirst','throne','tingle','tissue','tomato','tongue','toward','trance',
+     'travel','trench','tribal','trifle','triple','turret','turtle','tyrant','valley','velvet','vendor',
+     'verbal','vessel','victim','violet','virtue','vision','visual','walnut','wander','weasel','wicker',
+     'wiggle','winter','wisdom','wizard','wobble','wonder','wooden','yellow','zenith','zephyr'],
+  7:['abandon','absence','ancient','anxiety','archway','article','balance','banquet','barrier','battery',
+     'believe','benefit','bewitch','blossom','bluster','brigade','brother','cabinet','captain','careful',
+     'carnage','cartoon','cavalry','ceiling','century','certain','chamber','chapter','chicken','chimney',
+     'chronic','circuit','citizen','clarity','climate','cluster','college','comfort','combine','company',
+     'concert','conduct','connect','council','courage','crumble','crystal','culture','curious','curtain',
+     'customs','dolphin','doorway','dormant','earnest','eastern','elegant','element','enchant','failure',
+     'fashion','feature','feeling','fiction','flicker','flutter','fortune','forward','fragile','freedom',
+     'genuine','glacier','glamour','gravity','harvest','haunted','headway','healthy','history','holiday',
+     'horizon','hostile','imagine','impasse','impulse','inspect','instead','intense','justice','kingdom',
+     'kinship','kitchen','knowing','lantern','lasting','lateral','leading','library','limited','loyalty',
+     'magical','mansion','marshal','message','mineral','miracle','missing','mixture','morning','musical',
+     'mystery','nervous','notable','nothing','obscure','officer','orbital','organic','outpost','overlap',
+     'package','pattern','payment','pendant','perfect','pilgrim','pioneer','popular','portray','possess',
+     'problem','produce','product','profile','promise','protect','provide','quality','radical','ranking',
+     'reality','rebuild','recover','restore','reverse','rigging','royalty','rupture','sailing','savings',
+     'scholar','science','seaside','section','serious','servant','service','shallow','shelter','silence',
+     'similar','sincere','slender','society','somehow','sorcery','solemn','sparkle','speaker','special',
+     'species','storage','strange','succeed','suggest','supreme','survive','suspend','swimmer','symptom',
+     'tactics','tangent','teacher','tension','terrace','therapy','thunder','topmost','towards','trading',
+     'trouble','turning','twisted','uniform','unknown','unusual','upgrade','urgency','venture','village',
+     'vintage','violent','visible','welcome','western','whisker','whisper','winding','winning','witness'],
+  8:['absolute','abstract','accident','accurate','acoustic','adequate','adjacent','adorable','advanced',
+     'advisory','alliance','altitude','analysis','ancestor','annually','apparent','appetite','applause',
+     'approach','approval','argument','artifact','assemble','assuming','assorted','attached','attitude',
+     'audience','audacity','backbone','balanced','barefoot','baseline','bathroom','beginner','behavior',
+     'blizzard','calendar','campaign','canister','capacity','cardinal','carefree','category','cautious',
+     'ceremony','cheerful','circular','comeback','commerce','complete','compound','conquest','consider',
+     'consumer','contract','contrast','convince','corridor','creative','creature','crossing','customer',
+     'deadline','decision','delivery','describe','designer','diagnose','dialogue','director','discount',
+     'distinct','district','dominant','dramatic','duration','eastward','educated','elevated','emergent',
+     'employee','enormous','equipped','evaluate','evidence','exchange','exercise','explorer','fabulous',
+     'familiar','feminine','festival','finalist','floating','folklore','fragment','frequent','frontier',
+     'function','generate','generous','genetics','gigantic','glorious','governor','gradient','grateful',
+     'guidance','hardware','heritage','humanity','imagined','incoming','industry','informal','initiate',
+     'interact','internal','interval','involved','isolated','learning','magnetic','majority','manifest',
+     'maritime','marriage','material','mechanic','minimize','monarchy','multiple','national','navigate',
+     'negative','northern','obstacle','ordinary','overlook','overture','paradise','parallel','pastoral',
+     'peaceful','pendulum','personal','physical','platform','possible','powerful','precious','probable',
+     'prophecy','proposal','province','pursuing','question','randomly','reaction','recovery','regional',
+     'reinvent','relative','reliance','romantic','rotating','separate','sequence','shepherd','solution',
+     'southern','sporting','standard','standing','strategy','stronger','suitable','sunlight','sympathy',
+     'teaching','thorough','thousand','together','towering','treasure','tropical','twilight','ultimate',
+     'umbrella','uncommon','universe','unlikely','uprising','vacation','validate','valuable','variable',
+     'vigorous','volcanic','wanderer','wardrobe','weakness','wildfire','wireless','woodland','workshop'],
+  9:['abandoned','abolition','adventure','alongside','ambitious','amendment','ancestral','architect',
+     'artillery','authentic','awakening','challenge','character','coalition','combative','commodity',
+     'community','component','condition','configure','continual','corporate','corrupted','countless',
+     'crossfire','customize','dangerous','decisions','discovery','dominance','editorial','education',
+     'elaborate','eliminate','emergence','emotional','encounter','endurance','evolution','fantastic',
+     'formulate','framework','franchise','frequency','gathering','geography','graduated','grievance',
+     'guideline','impulsive','including','influence','intensive','interface','intricate','inventory',
+     'isolation','knowledge','landscape','legendary','machinery','mentality','milestone','migration',
+     'narrative','necessary','northeast','nostalgia','offspring','operating','orchestra','overthrow',
+     'ownership','peninsula','perennial','permanent','plausible','privilege','procedure','prototype',
+     'remainder','resilient','routinely','sanctuary','scattered','sensitive','shipwreck','snowflake',
+     'spiritual','structure','surrender','technical','temporary','testimony','tolerance','tradition',
+     'transpire','universal','unlimited','versatile','vibration','volunteer','wandering','willpower'],
+  10:['adaptation','altercation','atmosphere','categorical','ceremonial','conclusion','connection',
+      'contractor','curriculum','deliberate','department','diagnostic','domination','earthquake',
+      'elementary','employment','enthusiasm','evaluation','excavation','expedition','expressive',
+      'foundation','generation','geographic','illustrate','impression','incomplete','inevitable',
+      'inspection','invitation','laboratory','leadership','legitimacy','linguistics','manuscript',
+      'marketplace','measurement','medication','motivation','obligation','parliament','perception',
+      'persistence','phenomenon','photograph','plantation','population','prediction','prevention',
+      'productive','psychology','recreation','referendum','regularity','relocation','resistance',
+      'restoration','revelation','scholarship','separation','settlement','skepticism','speculation',
+      'submission','sustainable','technology','temperament','transaction','validation','wilderness'],
+  11:['achievement','application','celebration','composition','concentrate','controversy','demonstrate',
+      'development','electricity','elimination','environment','exploration','fundamental','imagination',
+      'improvement','incorporate','independent','inspiration','interaction','involvement','methodology',
+      'nationalism','observation','opportunity','partnership','perspective','progression','publication',
+      'recognition','relationship','resemblance','residential','responsible','scholarship','significance',
+      'spontaneous','temperature','traditional','transformed','translation','uncertainty','underground'],
+  12:['accomplished','architecture','breakthrough','championship','civilization','collaboration',
+      'complication','concentration','considerable','contemplation','contradiction','craftsmanship',
+      'disappearance','entanglement','environmental','establishment','evolutionary','geographical',
+      'governmental','hypothetical','illustration','independence','indifference','infringement',
+      'intellectual','investigation','jurisdiction','manufacturer','mountainside','obliteration',
+      'overwhelming','perseverance','polarization','productivity','proportional','purposefully',
+      'sophisticated','subterranean','transitional','transparency','triangulation','undergraduate'],
+};
+const LVL={
+  1:{lbl:'L1',dsc:'4-letter',len:[4]},2:{lbl:'L2',dsc:'5-letter',len:[5]},
+  3:{lbl:'L3',dsc:'6-letter',len:[6]},4:{lbl:'L4',dsc:'7-letter',len:[7]},
+  5:{lbl:'L5',dsc:'8-letter',len:[8]},6:{lbl:'L6',dsc:'9-letter',len:[9]},
+  7:{lbl:'L7',dsc:'4–6 letters',len:[4,5,6]},8:{lbl:'L8',dsc:'7–9 letters',len:[7,8,9]},
+  9:{lbl:'L9',dsc:'10–12 letters',len:[10,11,12]},10:{lbl:'L10',dsc:'Any length',len:[4,5,6,7,8,9,10,11,12]},
+};
+function rword(lens){const p=lens.flatMap(l=>W[l]||[]);return p.length?p[Math.floor(Math.random()*p.length)]:null;}
+// ── Firebase / localStorage operations ───────────────────────
+const FB={
+  // Profile
+  async usernameExists(name){
+    if(!db)return false;
+    try{const snap=await db.ref(`lexicon/players/${toKey(name)}`).once("value");return snap.exists();}
+    catch(e){return false;}
+  },
+  async saveProfile(name){
+    applyUsername(name);
+    if(!db)return;
+    await db.ref(`lexicon/players/${MY_ID}`).update({name:name.trim(),updatedAt:Date.now()});
+  },
+  async loadAccount(name){
+    applyUsername(name);
+    if(!db)return{stats:null,streak:null};
+    try{
+      const [ss,ts]=await Promise.all([
+        db.ref(`lexicon/stats/${MY_ID}`).once("value"),
+        db.ref(`lexicon/streaks/${MY_ID}`).once("value"),
+      ]);
+      return{stats:ss.val()||null,streak:ts.val()||null};
+    }catch(e){return{stats:null,streak:null};}
+  },
+  async getProfile(){
+    const ln=localStorage.getItem("lx_name")||"";
+    if(!db)return{name:ln};
+    try{const s=await db.ref(`lexicon/players/${MY_ID}`).once("value");return s.val()||{name:ln};}
+    catch(e){return{name:ln};}
+  },
+  // Solo stats
+  async recordSoloWin(level,ng){
+    const k=`lx_s${level}`;
+    const c=JSON.parse(localStorage.getItem(k)||'{"wins":0,"plays":0,"tg":0}');
+    localStorage.setItem(k,JSON.stringify({wins:c.wins+1,plays:c.plays+1,tg:c.tg+ng}));
+    if(!db)return;
+    const ref=db.ref(`lexicon/stats/${MY_ID}/solo/${level}`);
+    const snap=await ref.once('value');const cur=snap.val()||{wins:0,plays:0,tg:0};
+    await ref.set({wins:cur.wins+1,plays:cur.plays+1,tg:cur.tg+ng});
+  },
+  async recordSoloPlay(level){
+    const k=`lx_s${level}`;
+    const c=JSON.parse(localStorage.getItem(k)||'{"wins":0,"plays":0,"tg":0}');
+    localStorage.setItem(k,JSON.stringify({...c,plays:c.plays+1}));
+    if(!db)return;
+    const ref=db.ref(`lexicon/stats/${MY_ID}/solo/${level}`);
+    const snap=await ref.once('value');const cur=snap.val()||{wins:0,plays:0,tg:0};
+    await ref.update({plays:cur.plays+1});
+  },
+  // Multiplayer stats
+  async recordMultiWin(){
+    const c=JSON.parse(localStorage.getItem('lx_multi')||'{"wins":0,"plays":0}');
+    localStorage.setItem('lx_multi',JSON.stringify({wins:c.wins+1,plays:c.plays+1}));
+    if(!db)return;
+    const ref=db.ref(`lexicon/stats/${MY_ID}/multi`);
+    const snap=await ref.once('value');const cur=snap.val()||{wins:0,plays:0};
+    await ref.set({wins:cur.wins+1,plays:cur.plays+1});
+  },
+  async recordMultiPlay(){
+    const c=JSON.parse(localStorage.getItem('lx_multi')||'{"wins":0,"plays":0}');
+    localStorage.setItem('lx_multi',JSON.stringify({...c,plays:c.plays+1}));
+    if(!db)return;
+    const ref=db.ref(`lexicon/stats/${MY_ID}/multi`);
+    const snap=await ref.once('value');const cur=snap.val()||{wins:0,plays:0};
+    await ref.update({plays:cur.plays+1});
+  },
+  async getStats(){
+    const local={solo:{},multi:{wins:0,plays:0}};
+    for(let l=1;l<=10;l++){const d=JSON.parse(localStorage.getItem(`lx_s${l}`)||'null');if(d)local.solo[l]=d;}
+    const m=JSON.parse(localStorage.getItem('lx_multi')||'null');if(m)local.multi=m;
+    if(!db)return local;
+    try{const s=await db.ref(`lexicon/stats/${MY_ID}`).once('value');return s.val()||local;}
+    catch(e){return local;}
+  },
+  // Daily challenge
+  async hasDoneDaily(dateStr){
+    if(localStorage.getItem(`lx_d${dateStr}`))return true;
+    if(!db)return false;
+    try{const s=await db.ref(`lexicon/daily/${dateStr}/scores/${MY_ID}`).once('value');return s.exists();}
+    catch(e){return false;}
+  },
+  async submitDailyScore(name,guesses,dateStr,guessCounts){
+    localStorage.setItem(`lx_d${dateStr}`,guesses);
+    if(guessCounts)localStorage.setItem(`lx_dc${dateStr}`,JSON.stringify(guessCounts));
+    if(!db)return;
+    await db.ref(`lexicon/daily/${dateStr}/scores/${MY_ID}`).set({name,guesses,ts:Date.now(),pid:MY_ID});
+    await FB._updateStreak(dateStr);
+  },
+  async _updateStreak(dateStr){
+    if(!db)return;
+    const ref=db.ref(`lexicon/streaks/${MY_ID}`);
+    const snap=await ref.once('value');const cur=snap.val()||{current:0,best:0,lastCompleted:null};
+    if(cur.lastCompleted===dateStr)return;
+    const newCur=cur.lastCompleted===yesterdayStr()?cur.current+1:1;
+    const newBest=Math.max(cur.best||0,newCur);
+    await ref.set({current:newCur,best:newBest,lastCompleted:dateStr});
+  },
+  async getMyStreak(){
+    if(!db)return{current:0,best:0,lastCompleted:null};
+    try{const s=await db.ref(`lexicon/streaks/${MY_ID}`).once('value');return s.val()||{current:0,best:0,lastCompleted:null};}
+    catch(e){return{current:0,best:0,lastCompleted:null};}
+  },
+  // Leaderboard
+  async getLeaderboard(dateStr){
+    if(!db)return[];
+    try{
+      const s=await db.ref(`lexicon/daily/${dateStr}/scores`).once('value');
+      if(!s.exists())return[];
+      return Object.entries(s.val()).map(([pid,v])=>({...v,pid})).sort((a,b)=>a.guesses-b.guesses||a.ts-b.ts);
+    }catch(e){return[];}
+  },
+  // Multiplayer rooms
+  async createRoom(name){
+    const code=genCode();
+    await db.ref(`lexicon/rooms/${code}`).set({host:MY_ID,phase:'lobby',createdAt:Date.now(),players:{[MY_ID]:{name,joinedAt:Date.now(),online:true}}});
+    db.ref(`lexicon/rooms/${code}/players/${MY_ID}/online`).onDisconnect().set(false);
+    return code;
+  },
+  async joinRoom(code,name){
+    const snap=await db.ref(`lexicon/rooms/${code}`).once('value');
+    if(!snap.exists())throw new Error('Room not found');
+    const r=snap.val();
+    if(r.phase==='playing'||r.phase==='done')throw new Error('Game already in progress');
+    await db.ref(`lexicon/rooms/${code}/players/${MY_ID}`).set({name,joinedAt:Date.now(),online:true});
+    db.ref(`lexicon/rooms/${code}/players/${MY_ID}/online`).onDisconnect().set(false);
+    return code;
+  },
+  async startWordPhase(code){await db.ref(`lexicon/rooms/${code}/phase`).set('words');},
+  async submitWord(code,word){
+    await db.ref(`lexicon/rooms/${code}/words/${MY_ID}`).set(word);
+    await db.ref(`lexicon/rooms/${code}/players/${MY_ID}/wordSet`).set(true);
+  },
+  async dealAssignments(code,players,words){
+    const pids=Object.keys(players);const order=shuffle(pids);const asgn={};
+    order.forEach((pid,i)=>{const t=order[(i+1)%order.length];asgn[pid]={targetId:t,targetName:players[t].name,mystery:words[t]};});
+    await db.ref(`lexicon/rooms/${code}`).update({phase:'playing',order,assignments:asgn,startedAt:Date.now()});
+  },
+  async submitGuess(code,word,count,mystery,total){
+    await db.ref(`lexicon/rooms/${code}/guesses/${MY_ID}`).push({word,count,ts:Date.now()});
+    if(word===mystery)await db.ref(`lexicon/rooms/${code}/solved/${MY_ID}`).set({numGuesses:total+1,ts:Date.now()});
+  },
+  async finishGame(code){await db.ref(`lexicon/rooms/${code}/phase`).set('done');},
+};
+// ── Hooks ─────────────────────────────────────────────────────
+function useRoom(code){
+  const [room,setRoom]=useState(null);const [loading,setLoading]=useState(true);const [err,setErr]=useState(null);
+  useEffect(()=>{
+    if(!db||!code){setLoading(false);return;}
+    const ref=db.ref(`lexicon/rooms/${code}`);
+    const h=s=>{setLoading(false);s.exists()?setRoom(s.val()):setErr('Room not found');};
+    ref.on('value',h,e=>{setErr(e.message);setLoading(false);});
+    return()=>ref.off('value',h);
+  },[code]);
+  return{room,loading,err};
+}
+function useMyGuesses(code){
+  const [guesses,setGuesses]=useState([]);
+  useEffect(()=>{
+    if(!db||!code)return;
+    const ref=db.ref(`lexicon/rooms/${code}/guesses/${MY_ID}`);
+    const h=s=>{s.exists()?setGuesses(Object.values(s.val()).sort((a,b)=>a.ts-b.ts)):setGuesses([]);};
+    ref.on('value',h);return()=>ref.off('value',h);
+  },[code]);
+  return guesses;
+}
+
+// ── Shared UI Components ──────────────────────────────────────
+
+function LetterGrid(){
+  // states: null | 'struck' (single-click, eliminated) | 'circled' (double-click, selected/confirmed)
+  const [states,setStates]=useState({});
+  const lastClick=useRef({});
+
+  function handleClick(l){
+    const now=Date.now();
+    const last=lastClick.current[l]||0;
+    const isDouble=now-last<400;
+    lastClick.current[l]=now;
+
+    setStates(prev=>{
+      const next={...prev};
+      if(isDouble){
+        // double-click: cycle → struck, or clear if already struck
+        next[l]=prev[l]==='circled'?null:'circled';
+      } else {
+        // single-click: eliminate
+        next[l]=prev[l]==='struck'?null:'struck';
+      }
+      return next;
+    });
+  }
+
+  function reset(){setStates({});}
+  const circledCount=Object.values(states).filter(v=>v==='circled').length;
+  const struckCount=Object.values(states).filter(v=>v==='struck').length;
+  const anyMarked=circledCount>0||struckCount>0;
+
+  return(
+    <div className="inner mt12">
+      <div className="row ac jb mb8">
+        <div>
+          <span className="t-lbl">Letter Tracker</span>
+          <span style={{fontSize:'10px',color:'var(--dim)',marginLeft:'7px'}}>
+            single-click to eliminate · double-click to confirm
+          </span>
+        </div>
+        {anyMarked&&<button className="btn btn-o sm" onClick={reset}>RESET</button>}
+      </div>
+      <div className="agrid">
+        {'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(l=>{
+          const st=states[l]||null;
+          return(
+            <div key={l}
+              className={`atile${st==='circled'?' circled':st==='struck'?' struck':''}`}
+              onClick={()=>handleClick(l)}
+              title={st==='struck'?l+' — eliminated':st==='circled'?l+' — confirmed present':'Click: eliminate · Double-click: confirm'}
+            >{l}</div>
+          );
+        })}
+      </div>
+      {anyMarked&&(
+        <div style={{marginTop:'6px',fontSize:'10px',color:'var(--dim)',display:'flex',gap:'14px'}}>
+          {circledCount>0&&<span><span style={{color:'var(--ok)',fontWeight:'700'}}>{circledCount}</span> confirmed</span>}
+          {struckCount>0&&<span><span style={{color:'var(--err)',fontWeight:'700'}}>{struckCount}</span> eliminated</span>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BrainstormBox(){
+  const [text,setText]=useState('');
+  return(
+    <div className="inner mt12">
+      <div className="row ac jb mb8">
+        <div><span className="t-lbl">Brainstorm Box</span><span style={{fontSize:'10px',color:'var(--dim)',marginLeft:'7px'}}>private notes</span></div>
+        {text&&<button className="btn btn-o sm" onClick={()=>setText('')}>CLEAR</button>}
+      </div>
+      <textarea className="bst" value={text}
+        onChange={e=>setText(e.target.value.toUpperCase())}
+        placeholder={"JOT IDEAS, COMBOS, PARTIAL PATTERNS\nE.G.  _A_E_   TRY: CRANE, STARE, ROUTE"}
+        spellCheck="false" autoCorrect="off" autoCapitalize="characters"
+        style={{letterSpacing:'.06em'}}/>
+    </div>
+  );
+}
+
+function GuessInput({onSubmit,disabled,ph='Enter any English word…'}){
+  const [val,setVal]=useState('');const [st,setSt]=useState(null);const [msg,setMsg]=useState('');
+  const ref=useRef();
+  useEffect(()=>{if(!disabled&&ref.current)ref.current.focus();},[disabled]);
+  async function handle(e){
+    e.preventDefault();const w=val.trim().toLowerCase();if(!w)return;
+    if(w.length<4){setSt('err');setMsg('Guesses must be at least 4 letters');return;}
+    setSt('load');setMsg('');
+    const {valid,reason}=await validateWord(w);
+    if(!valid){setSt('err');setMsg(reason);return;}
+    setSt('ok');onSubmit(w);setVal('');setSt(null);setMsg('');
+    setTimeout(()=>ref.current?.focus(),40);
+  }
+  return(
+    <form onSubmit={handle} className="row g8" style={{alignItems:'flex-end'}}>
+      <div style={{flex:1}}>
+        <input ref={ref} className={`inp${st==='err'?' ie':''}`} value={val}
+          onChange={e=>setVal(e.target.value.replace(/[^a-zA-Z]/g,''))} placeholder={ph}
+          disabled={disabled||st==='load'} style={{fontSize:'16px'}}
+          autoComplete="off" autoCapitalize="none" spellCheck="false"/>
+        {msg&&<div className="ntc ne mt6" style={{fontSize:'11px'}}>{msg}</div>}
+      </div>
+      <button type="submit" className="btn btn-p" disabled={disabled||st==='load'||!val.trim()} style={{height:'44px',whiteSpace:'nowrap'}}>
+        {st==='load'?<span className="spin"/>:'GUESS'}
+      </button>
+    </form>
+  );
+}
+
+// Guess list — newest first (ascending display)
+function GuessList({guesses,mysteryWord,revealed}){
+  const display=[...guesses].reverse();
+  if(!guesses.length)return(<div className="tc" style={{color:'var(--dim)',fontSize:'12px',padding:'16px'}}>No guesses yet — type above to start!</div>);
+  return(
+    <div className="col g8">
+      {display.map((g,di)=>{
+        const num=guesses.length-di;const exact=g.word===mysteryWord;
+        return(
+          <div key={di} className="grow" style={exact?{borderColor:'var(--ok)',background:'rgba(51,255,136,.06)'}:{}}>
+            <div style={{width:'22px',color:'var(--dim)',fontSize:'10px',textAlign:'right'}}>{num}</div>
+            <div className="gword" style={{color:exact?'var(--ok)':'var(--txt)'}}>
+              {g.word}{exact&&<span style={{fontSize:'10px',marginLeft:'7px',color:'var(--ok)'}}>✓ CORRECT!</span>}
+            </div>
+            <div className={`gcnt ${cc(g.count)}`}>{g.count}</div>
+            <div style={{fontSize:'10px',color:'var(--dim)',minWidth:'40px',textAlign:'right'}}>{g.count===1?'letter':'letters'}</div>
+          </div>
+        );
+      })}
+      {revealed&&!guesses.some(g=>g.word===mysteryWord)&&(
+        <div className="ntc ne">Mystery word was: <strong style={{color:'var(--cyan)',textTransform:'uppercase'}}>{mysteryWord}</strong></div>
+      )}
+    </div>
+  );
+}
+
+function MysteryBoxes({length,won,word,daily=false,hideLength=false}){
+  if(hideLength&&!won){
+    return(
+      <div>
+        <div className="row jc g4 wrap">
+          {[0,1,2].map(i=>(
+            <div key={i} className="lbox" style={{opacity:i===1?1:0.4}}>{"?"}</div>
+          ))}
+        </div>
+        <div style={{textAlign:"center",fontSize:"10px",color:"var(--dim)",marginTop:"6px",letterSpacing:".08em"}}>
+          word length hidden — levels 7–10
+        </div>
+      </div>
+    );
+  }
+  return(
+    <div className="row jc g4 wrap">
+      {Array.from({length},(_,i)=>(
+        <div key={i} className={`lbox${won?(daily?' dly':' rev'):''}`}>{won?word[i].toUpperCase():'?'}</div>
+      ))}
+    </div>
+  );
+}
+// ═══════════════════════════════════════════════════
+//  PROFILE PAGE
+// ═══════════════════════════════════════════════════
+function ProfilePage({onBack,onNameSaved}){
+  const [name,setName]=useState(()=>localStorage.getItem('lx_name')||'');
+  const [stats,setStats]=useState(null);
+  const [streak,setStreak]=useState(null);
+  const [saving,setSaving]=useState(false);
+  const [saved,setSaved]=useState(false);
+  const [loading,setLoading]=useState(true);
+
+  useEffect(()=>{
+    async function load(){
+      const [s,st]=await Promise.all([FB.getStats(),FB.getMyStreak()]);
+      setStats(s);setStreak(st);setLoading(false);
+    }
+    load();
+  },[]);
+
+  const [nameErr,setNameErr]=useState("");
+  const [confirmName,setConfirmName]=useState(null);
+
+  async function handleSave(){
+    const t=name.trim();
+    if(!t)return;
+    if(t.length<2){setNameErr("Username must be at least 2 characters");return;}
+    setNameErr("");setSaving(true);
+    const curKey=toKey(localStorage.getItem("lx_name")||"");
+    if(toKey(t)!==curKey){
+      const ex=await FB.usernameExists(t);
+      if(ex){setSaving(false);setConfirmName(t);return;}
+    }
+    await doSave(t);
+  }
+
+  async function doSave(t){
+    setSaving(true);setConfirmName(null);
+    const r=await FB.loadAccount(t);
+    await FB.saveProfile(t);
+    if(r.stats)setStats(r.stats); else{const s=await FB.getStats();setStats(s);}
+    if(r.streak)setStreak(r.streak); else{const s=await FB.getMyStreak();setStreak(s);}
+    setSaving(false);setSaved(true);
+    if(onNameSaved)onNameSaved(t);
+    setTimeout(()=>setSaved(false),2500);
+  }
+
+  const initial=(name||'?')[0].toUpperCase();
+  const multiWins=stats?.multi?.wins||0;
+  const multiPlays=stats?.multi?.plays||0;
+  const soloTotalWins=stats?Object.values(stats.solo||{}).reduce((a,v)=>a+(v.wins||0),0):0;
+
+  return(
+    <div className="app">
+      <div className="nav">
+        <button className="btn btn-o sm" onClick={onBack}>← BACK</button>
+        <span className="t-lbl">My Profile</span>
+        <div style={{width:'70px'}}/>
+      </div>
+      <div className="panel">
+        {confirmName&&(
+          <div className="ntc nw mb16" style={{lineHeight:"1.7"}}>
+            <div style={{fontWeight:"700",marginBottom:"8px",fontSize:"13px"}}>
+              That username already exists.
+            </div>
+            <div style={{fontSize:"12px",marginBottom:"12px"}}>
+              Are you sure you want to play as{" "}
+              <span style={{color:"var(--gold)",fontWeight:"700"}}>‘{confirmName}’</span>?
+              Continuing will load the saved stats for this username.
+            </div>
+            <div className="row g8">
+              <button className="btn btn-g sm" onClick={()=>doSave(confirmName)} disabled={saving}>
+                {saving?<span className="spin"/>:"YES, PLAY AS THIS USER"}
+              </button>
+              <button className="btn btn-o sm" onClick={()=>setConfirmName(null)}>CANCEL</button>
+            </div>
+          </div>
+        )}
+
+        {/* Avatar + name editor */}
+        <div className="row ac g16 mb16">
+          <div className="avtr">{initial}</div>
+          <div style={{flex:1}}>
+            <div className="t-lbl mb6">Username</div>
+            <div className="row g8">
+              <input className={`inp${saved?" iok":nameErr?" ie":""}`} value={name}
+                onChange={e=>{setName(e.target.value);setNameErr("");}}
+                maxLength={20} placeholder="Enter username…" style={{fontSize:"15px"}}
+                onKeyDown={e=>e.key==="Enter"&&handleSave()}/>
+              <button className="btn btn-p sm" onClick={handleSave}
+                disabled={!name.trim()||saving||!!confirmName} style={{whiteSpace:"nowrap"}}>
+                {saving?<span className="spin"/>:saved?"✓ SAVED":"SAVE"}
+              </button>
+            </div>
+            {nameErr&&<div className="ntc ne mt6" style={{fontSize:"11px"}}>{nameErr}</div>}
+            {!nameErr&&(
+              <div style={{fontSize:"10px",color:"var(--dim)",marginTop:"5px",lineHeight:"1.5"}}>
+                {saved
+                  ?<span style={{color:"var(--ok)"}}>Signed in — stats synced across all devices</span>
+                  :"Same username on any device loads your stats · auto-fills in multiplayer"}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Streak banner */}
+        {streak&&(streak.current>0||streak.best>0)&&(
+          <>
+            <div className="div"/>
+            <div className="t-lbl mb10">Daily Challenge Streak</div>
+            <div className="sgrid mb4">
+              <div className="scard">
+                <div className="sval" style={{color:'var(--gold)'}}>🔥 {streak.current}</div>
+                <div className="slbl">Current Streak</div>
+                {streak.lastCompleted&&<div style={{fontSize:'10px',color:'var(--dim)',marginTop:'4px'}}>Last: {streak.lastCompleted}</div>}
+              </div>
+              <div className="scard">
+                <div className="sval" style={{color:'var(--pur)'}}>{streak.best}</div>
+                <div className="slbl">Best Streak</div>
+              </div>
+            </div>
+          </>
+        )}
+
+        <div className="div"/>
+        {loading?(
+          <div className="tc" style={{padding:'24px'}}><div className="spin" style={{width:'20px',height:'20px',margin:'0 auto'}}/></div>
+        ):(
+          <>
+            {/* Overview stats */}
+            <div className="t-lbl mb10">Overview</div>
+            <div className="sgrid mb16">
+              <div className="scard">
+                <div className="sval" style={{color:'var(--gold)'}}>{multiWins}</div>
+                <div className="slbl">Multiplayer Wins</div>
+                {multiPlays>0&&<div style={{fontSize:'10px',color:'var(--dim)',marginTop:'4px'}}>{multiPlays} games played</div>}
+              </div>
+              <div className="scard">
+                <div className="sval" style={{color:'var(--cyan)'}}>{soloTotalWins}</div>
+                <div className="slbl">Solo Wins Total</div>
+              </div>
+            </div>
+
+            {/* Per-level solo stats table */}
+            <div className="t-lbl mb10">Solo Play — Level by Level</div>
+            <div style={{overflowX:'auto'}}>
+              <table style={{width:'100%',borderCollapse:'collapse',fontSize:'12px'}}>
+                <thead>
+                  <tr style={{color:'var(--dim)',fontSize:'10px',letterSpacing:'.1em',textTransform:'uppercase'}}>
+                    {['Level','Words','Wins','Played','Win%','Avg Guesses'].map(h=>(
+                      <th key={h} style={{padding:'6px 8px',borderBottom:'1px solid var(--bord)',textAlign:h==='Level'?'left':'center'}}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(LVL).map(([k,v])=>{
+                    const d=stats?.solo?.[k]||{wins:0,plays:0,tg:0};
+                    const wins=d.wins||0;const plays=d.plays||0;const tg=d.tg||0;
+                    const avg=wins>0?(tg/wins).toFixed(1):'—';
+                    const pct=plays>0?Math.round((wins/plays)*100)+'%':'—';
+                    const active=wins>0||plays>0;
+                    return(
+                      <tr key={k} style={{opacity:active?1:.38,borderBottom:'1px solid rgba(30,30,64,.5)'}}>
+                        <td style={{padding:'8px',fontFamily:"'Orbitron',sans-serif",fontWeight:'700',color:'var(--cyan)',fontSize:'11px'}}>{v.lbl}</td>
+                        <td style={{padding:'8px',color:'var(--txtd)',textAlign:'center',fontSize:'11px'}}>{v.dsc}</td>
+                        <td style={{padding:'8px',textAlign:'center',color:wins>0?'var(--ok)':'var(--dim)',fontWeight:'700'}}>{wins}</td>
+                        <td style={{padding:'8px',textAlign:'center',color:'var(--txtd)'}}>{plays}</td>
+                        <td style={{padding:'8px',textAlign:'center',color:wins>0?'var(--gold)':'var(--dim)'}}>{pct}</td>
+                        <td style={{padding:'8px',textAlign:'center',color:wins>0?'var(--pur)':'var(--dim)',fontFamily:"'Orbitron',sans-serif",fontWeight:'700'}}>{avg}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            {soloTotalWins===0&&multiWins===0&&(
+              <div className="ntc ni mt12 tc" style={{fontSize:'11px'}}>Play some games and your stats will show up here!</div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Share Results
+function ShareButton({guesses,guessCount,storedCounts,dateStr,streakCount}){
+  const [copied,setCopied]=useState(false);
+
+  // Map a shared-letter count to a coloured square
+  // 0-2 → 🟥 red, 3-5 → 🟨 yellow, 6+ → 🟩 green, exact match → 🟦 blue
+  function countToBox(count, isLast){
+    if(isLast) return '🟦'; // blue = solved
+    if(count<=2) return '🟥'; // red
+    if(count<=5) return '🟨'; // yellow
+    return '🟩'; // green
+  }
+
+  function buildText(){
+    // Build boxes: prefer live guesses array, fall back to stored counts, fall back to plain count
+    let boxes;
+    const counts=guesses?guesses.map(g=>g.count):(storedCounts||null);
+    const total=guesses?guesses.length:(guessCount||0);
+    if(counts&&counts.length===total){
+      boxes=counts.map((cnt,i)=>countToBox(cnt,i===total-1)).join('');
+    } else {
+      // Fallback: all red then blue
+      boxes=Array.from({length:total},(_,i)=>i===total-1?'🟦':'🟥').join('');
+    }
+    const lines=[
+      'LEXICON Challenge — '+dateStr,
+      'Solved in '+total+' '+(total===1?'guess':'guesses'),
+      boxes,
+    ];
+    if(streakCount>0)lines.push('🔥 '+streakCount+'-day streak');
+    lines.push('','Play at: https://sites.google.com/view/lexiconchallenge/home');
+    return lines.join('\n');
+  }
+  async function share(){
+    const text=buildText();
+    try{
+      if(navigator.share){await navigator.share({text});}
+      else{await navigator.clipboard.writeText(text);setCopied(true);setTimeout(()=>setCopied(false),2200);}
+    }catch(e){
+      try{
+        const ta=document.createElement("textarea");
+        ta.value=text;ta.style.cssText="position:fixed;opacity:0";
+        document.body.appendChild(ta);ta.select();document.execCommand("copy");
+        document.body.removeChild(ta);setCopied(true);setTimeout(()=>setCopied(false),2200);
+      }catch(err){}
+    }
+  }
+  return(
+    <button className="btn btn-s fw mt8" onClick={share} style={{fontSize:"12px",letterSpacing:".06em"}}>
+      {copied?"✓ COPIED TO CLIPBOARD!":"📋 SHARE RESULTS"}
+    </button>
+  );
+}
+
+// ═══════════════════════════════════════════════════
+//  DAILY CHALLENGE
+// ═══════════════════════════════════════════════════
+function DailyChallenge({onBack,playerName}){
+  const dateKey=todayStr();
+  const dailyWord=getDailyWord(dateKey);
+  const [guesses,setGuesses]=useState([]);
+  const [won,setWon]=useState(false);
+  const [alreadyDone,setAlreadyDone]=useState(false);
+  const [prevScore,setPrevScore]=useState(null);
+  const [prevCounts,setPrevCounts]=useState(null);
+  const [streak,setStreak]=useState(null);
+  const [checking,setChecking]=useState(true);
+
+  useEffect(()=>{
+    async function init(){
+      const done=await FB.hasDoneDaily(dateKey);
+      if(done){
+        setAlreadyDone(true);
+        const cached=localStorage.getItem(`lx_d${dateKey}`);
+        if(cached)setPrevScore(Number(cached));
+        const cachedCounts=localStorage.getItem(`lx_dc${dateKey}`);
+        if(cachedCounts)try{setPrevCounts(JSON.parse(cachedCounts));}catch(e){}
+        else if(db){
+          const s=await db.ref(`lexicon/daily/${dateKey}/scores/${MY_ID}`).once('value');
+          if(s.exists())setPrevScore(s.val().guesses);
+        }
+      }
+      const st=await FB.getMyStreak();setStreak(st);setChecking(false);
+    }
+    init();
+  },[]);
+
+  async function onGuess(word){
+    if(won||alreadyDone)return;
+    const count=countShared(word,dailyWord);
+    const next=[...guesses,{word,count}];setGuesses(next);
+    if(word===dailyWord){
+      setWon(true);
+      const name=playerName||localStorage.getItem('lx_name')||'Anonymous';
+      await FB.submitDailyScore(name,next.length,dateKey,next.map(g=>g.count));
+      const st=await FB.getMyStreak();setStreak(st);
+    }
+  }
+
+  if(checking)return(<div className="app"><div className="panel tc" style={{padding:'60px'}}><div className="spin" style={{width:'24px',height:'24px',margin:'0 auto'}}/></div></div>);
+
+  return(
+    <div className="app">
+      <div className="nav">
+        <button className="btn btn-o sm" onClick={()=>onBack()}>← BACK</button>
+        <div className="row ac g8"><span className="bdg bv">DAILY</span><span style={{fontSize:'11px',color:'var(--txtd)'}}>{dateKey}</span></div>
+        <div style={{width:'70px'}}/>
+      </div>
+      <div className="panel">
+        {/* Daily word card */}
+        <div className="dcard mb16">
+          <div className="t-lbl mb8" style={{color:'var(--pur)'}}>Today's Challenge</div>
+          <div style={{fontSize:'11px',color:'var(--txtd)',marginBottom:'12px',lineHeight:'1.6'}}>
+            One mystery word · same for every player today · fewest guesses wins the leaderboard
+          </div>
+          <MysteryBoxes length={dailyWord.length} won={won||alreadyDone} word={dailyWord} daily={true}/>
+          {(won||alreadyDone)&&(
+            <div style={{textAlign:'center',marginTop:'10px',fontFamily:"'Orbitron',sans-serif",fontWeight:'700',
+              color:'var(--pur)',fontSize:'14px',letterSpacing:'.12em'}}>{dailyWord.toUpperCase()}</div>
+          )}
+        </div>
+
+        {/* Already completed state */}
+        {alreadyDone&&!won&&(
+          <>
+            <div className="ntc nv tc mb12">
+              ✓ Completed today!{prevScore&&<> Solved in <strong style={{color:'var(--pur)'}}>{prevScore}</strong> {prevScore===1?'guess':'guesses'}.</>}
+            </div>
+            {streak&&streak.current>0&&(
+              <div className="row ac jc g10 mb12">
+                <span style={{fontSize:'20px'}}>🔥</span>
+                <span style={{fontFamily:"'Orbitron',sans-serif",fontWeight:'700',fontSize:'15px',color:'var(--gold)'}}>{streak.current}-day streak</span>
+              </div>
+            )}
+            <button className="btn btn-v lg fw" onClick={()=>onBack('leaderboard')}>VIEW LEADERBOARD →</button>
+            {prevScore&&<ShareButton guessCount={prevScore} storedCounts={prevCounts} dateStr={dateKey} streakCount={streak?.current||0}/>}
+          </>
+        )}
+
+        {/* Won state */}
+        {won&&(
+          <div className="tc mt10 mb10">
+            <div style={{fontSize:'28px',marginBottom:'6px'}}>🎉</div>
+            <div className="t-head" style={{color:'var(--ok)',fontSize:'17px',marginBottom:'4px'}}>CRACKED IT!</div>
+            <div style={{color:'var(--txtd)',fontSize:'12px',margin:'4px 0 12px'}}>
+              Solved in <strong style={{color:'var(--ok)'}}>{guesses.length}</strong> {guesses.length===1?'guess':'guesses'}
+            </div>
+            {streak&&streak.current>0&&(
+              <div className="row ac jc g8 mb14">
+                <span style={{fontSize:'18px'}}>🔥</span>
+                <span style={{fontFamily:"'Orbitron',sans-serif",fontWeight:'700',color:'var(--gold)'}}>{streak.current}-day streak!</span>
+                {streak.best>1&&<span style={{fontSize:'10px',color:'var(--dim)'}}>(best: {streak.best})</span>}
+              </div>
+            )}
+            <button className="btn btn-v lg fw" onClick={()=>onBack('leaderboard')}>VIEW LEADERBOARD →</button>
+            <ShareButton guesses={guesses} dateStr={dateKey} streakCount={streak?.current||0}/>
+          </div>
+        )}
+
+        {/* Active play state */}
+        {!alreadyDone&&!won&&(
+          <>
+            <GuessInput onSubmit={onGuess} ph="Enter any English word…"/>
+            <div className="ntc ni mt8" style={{fontSize:'11px'}}>
+              Word length: <strong style={{color:'var(--pur)'}}>{dailyWord.length} letters</strong> · This word is the same for every player today
+            </div>
+          </>
+        )}
+
+        {/* Guess history */}
+        {guesses.length>0&&(
+          <>
+            <div className="div"/>
+            <div style={{fontWeight:'700',fontSize:'11px',color:'var(--txtd)',letterSpacing:'.1em',marginBottom:'10px'}}>
+              YOUR GUESSES <span style={{color:'var(--pur)'}}>{guesses.length}</span>
+              <span style={{fontWeight:'400',marginLeft:'8px',fontSize:'10px',color:'var(--dim)'}}>(newest first)</span>
+            </div>
+            <GuessList guesses={guesses} mysteryWord={dailyWord} revealed={false}/>
+          </>
+        )}
+        {!alreadyDone&&<><LetterGrid/><BrainstormBox/></>}
+      </div>
+    </div>
+  );
+}
+// ═══════════════════════════════════════════════════
+//  GLOBAL LEADERBOARD
+// ═══════════════════════════════════════════════════
+function Leaderboard({onBack}){
+  const [dateKey,setDateKey]=useState(todayStr());
+  const [entries,setEntries]=useState(null);
+  const [myStreak,setMyStreak]=useState(null);
+  const [loading,setLoading]=useState(true);
+  const isToday=dateKey===todayStr();
+  const dailyWord=getDailyWord(dateKey);
+  const myEntry=entries?.find(e=>e.pid===MY_ID);
+
+  useEffect(()=>{
+    async function load(){
+      setLoading(true);
+      const [lb,st]=await Promise.all([FB.getLeaderboard(dateKey),FB.getMyStreak()]);
+      setEntries(lb);setMyStreak(st);setLoading(false);
+    }
+    load();
+  },[dateKey]);
+
+  function prev(){const d=new Date(dateKey);d.setDate(d.getDate()-1);setDateKey(d.toISOString().slice(0,10));}
+  function next(){const d=new Date(dateKey);d.setDate(d.getDate()+1);if(d.toISOString().slice(0,10)<=todayStr())setDateKey(d.toISOString().slice(0,10));}
+
+  const medals=['🥇','🥈','🥉'];
+  const rnkCls=['rg','rs','rb'];
+
+  return(
+    <div className="app">
+      <div className="nav">
+        <button className="btn btn-o sm" onClick={onBack}>← BACK</button>
+        <span className="bdg bv">🏆 LEADERBOARD</span>
+        <div style={{width:'80px'}}/>
+      </div>
+      <div className="panel">
+        {/* Date navigation */}
+        <div className="row ac jb mb16">
+          <button className="btn btn-o sm" onClick={prev}>← PREV</button>
+          <div className="tc">
+            <div style={{fontFamily:"'Orbitron',sans-serif",fontWeight:'700',color:'var(--pur)',fontSize:'13px'}}>
+              {isToday?'TODAY':dateKey}
+            </div>
+            <div className="row jc ac g6 mt6">
+              <span className="t-lbl">Word:</span>
+              {/* Blur word if today and player hasn't played yet */}
+              <span style={{
+                fontFamily:"'Orbitron',sans-serif",fontWeight:'700',fontSize:'12px',letterSpacing:'.1em',
+                color:(isToday&&!myEntry)?'transparent':'var(--txt)',
+                textShadow:(isToday&&!myEntry)?'0 0 7px var(--txtd)':'none',
+                filter:(isToday&&!myEntry)?'blur(5px)':'none',
+                userSelect:(isToday&&!myEntry)?'none':'auto',
+              }}>
+                {dailyWord.toUpperCase()}
+              </span>
+              {isToday&&!myEntry&&<span style={{fontSize:'10px',color:'var(--dim)'}}>(complete to reveal)</span>}
+            </div>
+          </div>
+          <button className="btn btn-o sm" onClick={next} disabled={isToday}>NEXT →</button>
+        </div>
+
+        {/* My streak callout */}
+        {myStreak&&(myStreak.current>0)&&(
+          <div className="row ac g12 mb16"
+            style={{background:'rgba(255,201,64,.06)',border:'1px solid rgba(255,201,64,.2)',borderRadius:'9px',padding:'10px 14px'}}>
+            <span style={{fontSize:'20px'}}>🔥</span>
+            <div style={{flex:1}}>
+              <div style={{fontFamily:"'Orbitron',sans-serif",fontWeight:'700',color:'var(--gold)',fontSize:'13px'}}>{myStreak.current} DAY STREAK</div>
+              <div style={{fontSize:'10px',color:'var(--dim)'}}>Personal best: {myStreak.best} days</div>
+            </div>
+            <div style={{textAlign:'right'}}>
+              <div style={{fontSize:'10px',color:'var(--txtd)'}}>Last played</div>
+              <div style={{fontSize:'11px',color:'var(--txt)'}}>{myStreak.lastCompleted||'—'}</div>
+            </div>
+          </div>
+        )}
+
+        {/* Leaderboard entries */}
+        {loading?(
+          <div className="tc" style={{padding:'32px'}}><div className="spin" style={{width:'22px',height:'22px',margin:'0 auto'}}/></div>
+        ):!FB_READY?(
+          <div className="ntc ni tc">Firebase setup required to view the global leaderboard.</div>
+        ):!entries?.length?(
+          <div className="ntc ni tc">
+            {isToday?'No entries yet — be first to complete today\'s challenge!':'No entries recorded for this date.'}
+          </div>
+        ):(
+          <div className="col g8">
+            {entries.map((e,i)=>{
+              const isMe=e.pid===MY_ID;
+              return(
+                <div key={i} className={`lbrow${i<3?' top':''}${isMe?' mrow':''}`}>
+                  <div className={`lbrnk${rnkCls[i]?' '+rnkCls[i]:''}`}>
+                    {i<3?medals[i]:`#${i+1}`}
+                  </div>
+                  <div style={{flex:1}}>
+                    <div style={{fontWeight:'700',fontSize:'13px'}}>
+                      {e.name||'Anonymous'}
+                      {isMe&&<span style={{fontSize:'10px',color:'var(--cyan)',marginLeft:'7px'}}>(you)</span>}
+                    </div>
+                    <div style={{fontSize:'10px',color:'var(--dim)'}}>
+                      {new Date(e.ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}
+                    </div>
+                  </div>
+                  <div className="tc">
+                    <div style={{fontFamily:"'Orbitron',sans-serif",fontWeight:'700',fontSize:'22px',
+                      color:i===0?'var(--gold)':isMe?'var(--cyan)':'var(--txt)'}}>{e.guesses}</div>
+                    <div style={{fontSize:'10px',color:'var(--dim)'}}>guesses</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {isToday&&FB_READY&&!myEntry&&!loading&&(
+          <div className="ntc nv mt12 tc" style={{fontSize:'12px'}}>Complete today's challenge to appear on the leaderboard!</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════
+//  SOLO MODE
+// ═══════════════════════════════════════════════════
+function LevelSelect({onSelect,onBack}){
+  return(
+    <div className="app">
+      <div className="nav">
+        <button className="btn btn-o sm" onClick={onBack}>← BACK</button>
+        <span className="t-lbl">Solo Mode</span>
+        <div style={{width:'70px'}}/>
+      </div>
+      <div className="panel">
+        <div className="t-head" style={{fontSize:'16px',color:'var(--cyan)',marginBottom:'4px'}}>SELECT LEVEL</div>
+        <div style={{color:'var(--txtd)',fontSize:'12px',marginBottom:'20px'}}>Word length varies by difficulty</div>
+        <div className="lgrid">
+          {Object.entries(LVL).map(([k,v])=>(
+            <div key={k} className="lbtn" onClick={()=>onSelect(Number(k))}>
+              <div className="lnum">{v.lbl}</div>
+              <div className="ldsc">{v.dsc}</div>
+            </div>
+          ))}
+        </div>
+        <div className="div"/>
+        <div className="ntc ni" style={{fontSize:'11px',lineHeight:'1.65'}}>
+          Each guess returns the <strong>count of shared letters</strong> between your word and the mystery word (by frequency). Use the Letter Tracker and Brainstorm Box to strategize!
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SoloGame({level,onBack}){
+  const cfg=LVL[level];
+  const [mystery,setMystery]=useState(()=>rword(cfg.len));
+  const [guesses,setGuesses]=useState([]);
+  const [won,setWon]=useState(false);
+  const [revealed,setRevealed]=useState(false);
+  const [statSaved,setStatSaved]=useState(false);
+  const [playSaved,setPlaySaved]=useState(false);
+
+  // Record play on first guess
+  useEffect(()=>{
+    if(guesses.length===1&&!playSaved){setPlaySaved(true);FB.recordSoloPlay(level).catch(()=>{});}
+  },[guesses.length]);
+
+  async function onGuess(word){
+    if(won)return;
+    const count=countShared(word,mystery);
+    const next=[...guesses,{word,count}];setGuesses(next);
+    if(word===mystery){
+      setWon(true);
+      if(!statSaved){setStatSaved(true);await FB.recordSoloWin(level,next.length);}
+    }
+  }
+  function restart(){setMystery(rword(cfg.len));setGuesses([]);setWon(false);setRevealed(false);setStatSaved(false);setPlaySaved(false);}
+
+  return(
+    <div className="app">
+      <div className="nav">
+        <button className="btn btn-o sm" onClick={onBack}>← LEVELS</button>
+        <div className="row ac g8">
+          <span className="bdg bc">{cfg.lbl}</span>
+          {level<7&&<span style={{fontSize:"10px",color:"var(--dim)"}}>{mystery.length} letters</span>}
+          {level>=7&&!won&&<span style={{fontSize:"10px",color:"var(--dim)"}}>length hidden</span>}
+          {level>=7&&won&&<span style={{fontSize:"10px",color:"var(--ok)"}}>{mystery.length} letters</span>}
+        </div>
+        <button className="btn btn-o sm" onClick={restart}>↺ NEW</button>
+      </div>
+      <div className="panel">
+        <div className="tc mb16">
+          <div className="t-lbl mb8">Mystery Word</div>
+          <MysteryBoxes length={mystery.length} won={won} word={mystery} hideLength={level>=7}/>
+        </div>
+        {!won&&!revealed&&<><div className="div"/><GuessInput onSubmit={onGuess}/></>}
+        {won&&(
+          <div className="tc mt10 mb4">
+            <div style={{fontSize:'26px',marginBottom:'5px'}}>🎉</div>
+            <div className="t-head" style={{color:'var(--ok)',fontSize:'17px',marginBottom:'4px'}}>SOLVED!</div>
+            <div style={{color:'var(--txtd)',fontSize:'12px',marginBottom:'14px'}}>{guesses.length} {guesses.length===1?'guess':'guesses'}</div>
+            <button className="btn btn-p" onClick={restart}>PLAY AGAIN</button>
+          </div>
+        )}
+        {!won&&!revealed&&guesses.length>=3&&<div className="tc mt10"><button className="btn btn-d sm" onClick={()=>setRevealed(true)}>Give Up</button></div>}
+        {revealed&&<div className="tc mt10"><button className="btn btn-g" onClick={restart}>TRY AGAIN</button></div>}
+        <div className="div"/>
+        <div style={{fontWeight:'700',fontSize:'11px',color:'var(--txtd)',letterSpacing:'.1em',marginBottom:'10px'}}>
+          GUESSES <span style={{color:'var(--cyan)'}}>{guesses.length}</span>
+          <span style={{fontWeight:'400',marginLeft:'8px',fontSize:'10px',color:'var(--dim)'}}>(newest first)</span>
+        </div>
+        <GuessList guesses={guesses} mysteryWord={mystery} revealed={revealed}/>
+        <LetterGrid/>
+        <BrainstormBox/>
+      </div>
+    </div>
+  );
+}
+// ═══════════════════════════════════════════════════
+//  MULTIPLAYER SCREENS
+// ═══════════════════════════════════════════════════
+function FBSetup({onBack}){
+  return(
+    <div className="app">
+      <div className="nav"><button className="btn btn-o sm" onClick={onBack}>← BACK</button><span className="t-lbl">Firebase Setup</span><div style={{width:'80px'}}/></div>
+      <div className="panel">
+        <div className="t-head" style={{color:'var(--gold)',fontSize:'16px',marginBottom:'6px'}}>Firebase Required</div>
+        <div style={{color:'var(--txtd)',fontSize:'12px',lineHeight:'1.7',marginBottom:'16px'}}>Online Multiplayer, the Global Leaderboard and cloud Stats all require a free Firebase project.</div>
+        {[['1','Visit https://console.firebase.google.com → Add project'],
+          ['2','Build → Realtime Database → Create → Test mode → Enable'],
+          ['3','Project Settings ⚙ → Web app </> → Register → copy config'],
+          ['4','Replace YOUR_* values in window.LEXICON_FB at top of this file']
+        ].map(([n,t])=>(
+          <div key={n} className="row g10 mb10" style={{alignItems:'flex-start'}}>
+            <div style={{width:'20px',height:'20px',borderRadius:'50%',background:'rgba(255,201,64,.15)',
+              border:'1.5px solid var(--gold)',display:'flex',alignItems:'center',justifyContent:'center',
+              fontSize:'10px',fontWeight:'700',color:'var(--gold)',flexShrink:0,marginTop:'2px'}}>{n}</div>
+            <div style={{fontSize:'12px',lineHeight:'1.6'}}>{t}</div>
+          </div>
+        ))}
+        <div className="ntc ni mt10" style={{fontSize:'11px'}}>Solo mode and the Daily Challenge work without Firebase.</div>
+      </div>
+    </div>
+  );
+}
+
+function MultiHome({onBack,onJoin,playerName}){
+  const [tab,setTab]=useState('create');
+  const [name,setName]=useState(playerName||'');
+  const [code,setCode]=useState('');
+  const [loading,setLoading]=useState(false);
+  const [err,setErr]=useState('');
+
+  async function handleCreate(e){
+    e.preventDefault();if(!name.trim())return;setLoading(true);setErr('');
+    try{const c=await FB.createRoom(name.trim());onJoin(c,name.trim());}catch(e){setErr(e.message);}
+    setLoading(false);
+  }
+  async function handleJoin(e){
+    e.preventDefault();if(!name.trim()||!code.trim())return;setLoading(true);setErr('');
+    try{await FB.joinRoom(code.trim().toUpperCase(),name.trim());onJoin(code.trim().toUpperCase(),name.trim());}catch(e){setErr(e.message);}
+    setLoading(false);
+  }
+
+  return(
+    <div className="app">
+      <div className="nav"><button className="btn btn-o sm" onClick={onBack}>← BACK</button><span className="t-lbl">Multiplayer</span><div style={{width:'80px'}}/></div>
+      <div className="panel">
+        <div className="row ac g8 mb16"><div className="dot dok"/><span className="t-head" style={{color:'var(--gold)',fontSize:'16px'}}>ONLINE MULTIPLAYER</span></div>
+        <div className="row g8 mb20">
+          {['create','join'].map(t=>(
+            <button key={t} className={`btn ${tab===t?'btn-p':'btn-o'} sm fw`} style={{flex:1}} onClick={()=>{setTab(t);setErr('');}}>
+              {t==='create'?'CREATE ROOM':'JOIN ROOM'}
+            </button>
+          ))}
+        </div>
+
+        {tab==='create'&&(
+          <form onSubmit={handleCreate} className="col g12">
+            <div>
+              <div className="t-lbl mb8">Your Name</div>
+              <input className="inp" value={name} onChange={e=>setName(e.target.value)} placeholder="Display name…" maxLength={20} autoFocus/>
+              {playerName&&name===playerName&&<div style={{fontSize:'10px',color:'var(--ok)',marginTop:'4px'}}>✓ Auto-filled from profile</div>}
+            </div>
+            {err&&<div className="ntc ne">{err}</div>}
+            <button type="submit" className="btn btn-g lg fw" disabled={!name.trim()||loading}>
+              {loading?<span className="spin"/>:'CREATE ROOM'}
+            </button>
+          </form>
+        )}
+
+        {tab==='join'&&(
+          <form onSubmit={handleJoin} className="col g12">
+            <div>
+              <div className="t-lbl mb8">Your Name</div>
+              <input className="inp" value={name} onChange={e=>setName(e.target.value)} placeholder="Display name…" maxLength={20}/>
+            </div>
+            <div>
+              <div className="t-lbl mb8">Room Code</div>
+              <input className="inp" value={code}
+                onChange={e=>setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,''))}
+                placeholder="6-character code…" maxLength={6}
+                style={{letterSpacing:'.2em',fontFamily:"'Orbitron',sans-serif",fontWeight:'700',fontSize:'20px'}}/>
+            </div>
+            {err&&<div className="ntc ne">{err}</div>}
+            <button type="submit" className="btn btn-p lg fw" disabled={!name.trim()||code.length!==6||loading}>
+              {loading?<span className="spin"/>:'JOIN ROOM'}
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MultiLobby({code,room,myName}){
+  const isHost=room.host===MY_ID;
+  const plist=Object.entries(room.players||{});
+  function copy(){navigator.clipboard?.writeText(code).catch(()=>{});}
+  return(
+    <div className="app">
+      <div className="panel">
+        <div className="tc mb16">
+          <div className="t-lbl mb8">ROOM CODE — SHARE WITH FRIENDS</div>
+          <div className="rcode" onClick={copy} style={{cursor:'pointer'}} title="Tap to copy">{code}</div>
+          <div style={{fontSize:'10px',color:'var(--dim)',marginTop:'5px'}}>tap to copy</div>
+        </div>
+        <div className="div"/>
+        <div className="t-lbl mb10">Players ({plist.length}/8)</div>
+        <div className="col g8 mb16">
+          {plist.map(([pid,p],i)=>(
+            <div key={pid} className={`pcard row ac g10${pid===MY_ID?' me':''}`}>
+              <div className={`pnum${pid===MY_ID?' mi':''}`}>{i+1}</div>
+              <div style={{flex:1,fontWeight:'700'}}>
+                {p.name}
+                {pid===MY_ID&&<span style={{fontSize:'10px',color:'var(--cyan)',marginLeft:'6px'}}>(you)</span>}
+                {pid===room.host&&<span style={{fontSize:'10px',color:'var(--gold)',marginLeft:'6px'}}>host</span>}
+              </div>
+              <div className={`dot ${p.online!==false?'dok':'ddim'}`}/>
+            </div>
+          ))}
+        </div>
+        {isHost
+          ?<><button className="btn btn-g lg fw" disabled={plist.length<2} onClick={()=>FB.startWordPhase(code)}>
+              START GAME ({plist.length} players)
+            </button>
+            {plist.length<2&&<div style={{textAlign:'center',color:'var(--dim)',fontSize:'11px',marginTop:'7px'}}>Need at least 2 players to start</div>}
+          </>
+          :<div className="ntc nw tc"><span className="dot dpul" style={{marginRight:'8px'}}/>Waiting for the host to start…</div>}
+      </div>
+    </div>
+  );
+}
+
+function MultiWordEntry({code,room}){
+  const [word,setWord]=useState('');const [submitting,setSubmitting]=useState(false);const [err,setErr]=useState('');
+  const players=room.players||{};const words=room.words||{};const mySet=!!words[MY_ID];
+  const allSet=Object.keys(players).every(pid=>words[pid]);const isHost=room.host===MY_ID;
+
+  async function submit(e){
+    e.preventDefault();const w=word.trim().toLowerCase();if(!w)return;
+    if(w.length<4||w.length>9){setErr('Word must be 4–9 letters');return;}
+    setSubmitting(true);setErr('');
+    const {valid,reason}=await validateWord(w);
+    if(!valid){setErr(reason);setSubmitting(false);return;}
+    await FB.submitWord(code,w);setSubmitting(false);
+  }
+
+  return(
+    <div className="app">
+      <div className="panel">
+        <div className="t-head" style={{color:'var(--cyan)',fontSize:'16px',marginBottom:'4px'}}>Set Your Mystery Word</div>
+        <div style={{color:'var(--txtd)',fontSize:'12px',marginBottom:'16px',lineHeight:'1.6'}}>Choose a secret 4–9 letter English word for another player to guess. Keep it hidden!</div>
+        {!mySet
+          ?<form onSubmit={submit} className="col g10">
+              <input type="text" className={`inp${err?' ie':''}`} value={word}
+                onChange={e=>setWord(e.target.value.replace(/[^a-zA-Z]/g,''))}
+                placeholder="Your secret mystery word…"
+                style={{fontSize:'18px',letterSpacing:'.08em'}} disabled={submitting} autoFocus/>
+              {err&&<div className="ntc ne">{err}</div>}
+              <div className="ntc ni" style={{fontSize:'11px'}}>4–9 letters · English dictionary · no proper nouns</div>
+              <button type="submit" className="btn btn-p lg fw" disabled={!word.trim()||submitting}>
+                {submitting?<span className="spin"/>:'SET MY WORD 🔒'}
+              </button>
+            </form>
+          :<div className="ntc nok tc" style={{fontSize:'14px',padding:'16px'}}>✓ Your word is locked in!</div>}
+        <div className="div"/>
+        <div className="t-lbl mb10">Player Status</div>
+        <div className="col g8">
+          {Object.entries(players).map(([pid,p])=>(
+            <div key={pid} className="row ac g10" style={{padding:'8px 12px',background:'var(--s2)',borderRadius:'8px',border:'1px solid var(--bord)'}}>
+              <div style={{flex:1,fontWeight:'700',fontSize:'13px'}}>{p.name}{pid===MY_ID&&<span style={{fontSize:'10px',color:'var(--cyan)',marginLeft:'6px'}}>(you)</span>}</div>
+              {words[pid]?<span className="bdg bok">✓ READY</span>:<span style={{fontSize:'11px',color:'var(--dim)'}} className="ap">waiting…</span>}
+            </div>
+          ))}
+        </div>
+        {isHost&&allSet&&<button className="btn btn-g lg fw mt16" onClick={()=>FB.dealAssignments(code,players,words)}>DEAL ASSIGNMENTS & START →</button>}
+        {isHost&&!allSet&&<div className="ntc nw mt12 tc" style={{fontSize:'12px'}}>Waiting for all players to set their words…</div>}
+        {!isHost&&allSet&&<div className="ntc ni mt12 tc" style={{fontSize:'12px'}}>All ready! Waiting for host to start…</div>}
+        {!isHost&&!allSet&&<div className="ntc nw mt12 tc"><span className="dot dpul" style={{marginRight:'8px'}}/>Waiting for other players…</div>}
+      </div>
+    </div>
+  );
+}
+
+function MultiGame({code,room,myName}){
+  const guesses=useMyGuesses(code);
+  const [submitting,setSubmitting]=useState(false);
+  const [winSaved,setWinSaved]=useState(false);
+  const [playSaved,setPlaySaved]=useState(false);
+  const asgn=(room.assignments||{})[MY_ID];
+  const solved=room.solved||{};const players=room.players||{};
+  const mySolved=!!solved[MY_ID];
+
+  // Record multi play on first guess
+  useEffect(()=>{
+    if(guesses.length===1&&!playSaved){setPlaySaved(true);FB.recordMultiPlay().catch(()=>{});}
+  },[guesses.length]);
+  // Record multi win
+  useEffect(()=>{
+    if(mySolved&&!winSaved){setWinSaved(true);FB.recordMultiWin().catch(()=>{});}
+  },[mySolved,winSaved]);
+  // Auto-finish when all solved
+  useEffect(()=>{
+    if(!room||room.phase!=='playing')return;
+    if(Object.keys(solved).length>=Object.keys(players).length)FB.finishGame(code).catch(()=>{});
+  },[solved,players,room,code]);
+
+  if(!asgn)return(<div className="app"><div className="panel tc" style={{padding:'60px'}}><div className="spin" style={{width:'22px',height:'22px',margin:'0 auto 12px'}}/><div style={{color:'var(--dim)'}}>Loading assignment…</div></div></div>);
+
+  async function onGuess(word){
+    if(mySolved||submitting)return;setSubmitting(true);
+    const count=countShared(word,asgn.mystery);
+    await FB.submitGuess(code,word,count,asgn.mystery,guesses.length);
+    setSubmitting(false);
+  }
+
+  return(
+    <div className="app">
+      <div className="nav">
+        <div className="row ac g8"><span className="bdg bg">{code}</span><span style={{fontSize:'11px',color:'var(--dim)'}}>online</span></div>
+        <div className="row ac g6"><div className="dot dok"/><span style={{fontSize:'11px',color:'var(--txtd)'}}>{myName}</span></div>
+      </div>
+      <div className="panel">
+        <div className="row ac jb mb12 wrap g10">
+          <div><div className="t-lbl mb4">Guessing word set by</div><div className="t-head" style={{fontSize:'18px',color:'var(--gold)'}}>{asgn.targetName}</div></div>
+          <div className="tc"><div className="t-lbl mb4">Length</div><div style={{fontFamily:"'Orbitron',sans-serif",fontWeight:'900',fontSize:'24px',color:'var(--cyan)'}}>{asgn.mystery.length}</div></div>
+        </div>
+        <div className="tc mb12"><MysteryBoxes length={asgn.mystery.length} won={mySolved} word={asgn.mystery}/></div>
+        {!mySolved&&<><div className="div"/><GuessInput onSubmit={onGuess} disabled={mySolved||submitting} ph={`Guess ${asgn.targetName}'s mystery word…`}/></>}
+        {mySolved&&<div className="ntc nok tc mt10 mb4">🎉 Solved in {solved[MY_ID]?.numGuesses} guesses! Watching others finish…</div>}
+        <div className="div"/>
+        <div className="t-lbl mb10">GAME PROGRESS</div>
+        <div className="col g6 mb14">
+          {Object.entries(players).map(([pid,p])=>{
+            const s=solved[pid];const isSelf=pid===MY_ID;
+            return(
+              <div key={pid} className={`pcard row ac g10${s?' pw':''}${isSelf?' me':''}`} style={{padding:'9px 13px'}}>
+                <div className={`pnum${isSelf?' mi':''}`}>{s?'✓':<span className="spin" style={{width:'10px',height:'10px'}}/>}</div>
+                <div style={{flex:1,fontSize:'13px'}}>
+                  <span style={{fontWeight:'700'}}>{p.name}</span>{isSelf&&<span style={{fontSize:'10px',color:'var(--cyan)',marginLeft:'6px'}}>(you)</span>}
+                  <div style={{fontSize:'10px',color:'var(--dim)'}}>→ {(room.assignments||{})[pid]?.targetName}'s word</div>
+                </div>
+                <div>{s?<span style={{color:'var(--ok)',fontFamily:"'Orbitron',sans-serif",fontWeight:'700',fontSize:'12px'}}>{s.numGuesses}g</span>:<span style={{color:'var(--dim)',fontSize:'12px'}}>…</span>}</div>
+              </div>
+            );
+          })}
+        </div>
+        <div style={{fontWeight:'700',fontSize:'11px',color:'var(--txtd)',letterSpacing:'.1em',marginBottom:'10px'}}>
+          YOUR GUESSES <span style={{color:'var(--cyan)'}}>{guesses.length}</span>
+          <span style={{fontWeight:'400',marginLeft:'8px',fontSize:'10px',color:'var(--dim)'}}>(newest first)</span>
+        </div>
+        <GuessList guesses={guesses} mysteryWord={asgn.mystery} revealed={false}/>
+        <LetterGrid/>
+        <BrainstormBox/>
+      </div>
+    </div>
+  );
+}
+
+function MultiResults({code,room,onBack}){
+  const players=room.players||{};const solved=room.solved||{};const asgns=room.assignments||{};
+  const sorted=Object.entries(players).sort(([a],[b])=>{
+    const sa=solved[a],sb=solved[b];
+    if(sa&&!sb)return-1;if(!sa&&sb)return 1;
+    if(sa&&sb)return sa.numGuesses-sb.numGuesses||sa.ts-sb.ts;
+    return 0;
+  });
+  return(
+    <div className="app">
+      <div className="panel tc">
+        <div style={{fontSize:'36px',marginBottom:'8px'}}>🏆</div>
+        <div className="t-head" style={{fontSize:'19px',color:'var(--gold)',marginBottom:'4px'}}>GAME OVER</div>
+        <div style={{color:'var(--txtd)',fontSize:'12px',marginBottom:'18px'}}>Room {code} · Final Results</div>
+        <div className="col g8 mb18">
+          {sorted.map(([pid,p],i)=>{
+            const s=solved[pid];const a=asgns[pid];const isSelf=pid===MY_ID;
+            return(
+              <div key={pid} className={`pcard row ac g12${isSelf?' me':''}`} style={i===0?{borderColor:'var(--gold)',background:'rgba(255,201,64,.04)'}:{}}>
+                <div style={{width:'22px',textAlign:'center',fontSize:'16px'}}>{i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}`}</div>
+                <div style={{flex:1,textAlign:'left'}}>
+                  <div style={{fontWeight:'700',fontSize:'13px'}}>{p.name}{isSelf&&<span style={{fontSize:'10px',color:'var(--cyan)',marginLeft:'6px'}}>(you)</span>}</div>
+                  {a&&<div style={{fontSize:'10px',color:'var(--dim)',marginTop:'2px'}}>Solved: <span style={{color:'var(--cyan)',textTransform:'uppercase'}}>{a.mystery}</span> (by {a.targetName})</div>}
+                </div>
+                <div>{s?<span style={{color:'var(--ok)',fontFamily:"'Orbitron',sans-serif",fontWeight:'700',fontSize:'14px'}}>{s.numGuesses}g</span>:<span className="bdg be">DNF</span>}</div>
+              </div>
+            );
+          })}
+        </div>
+        <button className="btn btn-p lg" onClick={onBack}>BACK TO MENU</button>
+      </div>
+    </div>
+  );
+}
+
+function MultiCtrl({code,myName,onBack}){
+  const {room,loading,err}=useRoom(code);
+  if(loading)return(<div className="app"><div className="panel tc" style={{padding:'60px'}}><div className="spin" style={{width:'24px',height:'24px',margin:'0 auto 14px'}}/><div style={{color:'var(--dim)'}}>Connecting to room {code}…</div></div></div>);
+  if(err)return(<div className="app"><div className="panel tc"><div className="ntc ne mb12">{err}</div><button className="btn btn-o" onClick={onBack}>← BACK</button></div></div>);
+  if(!room)return null;
+  if(room.phase==='lobby')return<MultiLobby code={code} room={room} myName={myName}/>;
+  if(room.phase==='words')return<MultiWordEntry code={code} room={room}/>;
+  if(room.phase==='playing')return<MultiGame code={code} room={room} myName={myName}/>;
+  if(room.phase==='done')return<MultiResults code={code} room={room} onBack={onBack}/>;
+  return null;
+}
+// ═══════════════════════════════════════════════════
+//  HOME SCREEN
+// ═══════════════════════════════════════════════════
+function Home({onSolo,onMulti,onDaily,onBoard,onProfile,playerName,dailyDone}){
+  const initial=(playerName||'?')[0].toUpperCase();
+  return(
+    <div className="app">
+      {/* Header */}
+      <div className="row ac jb" style={{paddingBottom:'16px'}}>
+        <div className="t-title ag" style={{fontSize:'26px',color:'var(--cyan)',letterSpacing:'.15em'}}>LEXICON</div>
+        <div className="row ac g8">
+          <button className="btn btn-o sm" onClick={onBoard}>🏆 BOARD</button>
+          <div onClick={onProfile} title="My Profile"
+            className="row ac g6"
+            style={{cursor:"pointer",padding:"5px 10px 5px 6px",borderRadius:"22px",
+              background:"rgba(0,229,204,.07)",border:"1.5px solid var(--cyan)",transition:"background .14s"}}
+            onMouseEnter={e=>e.currentTarget.style.background="rgba(0,229,204,.14)"}
+            onMouseLeave={e=>e.currentTarget.style.background="rgba(0,229,204,.07)"}>
+            <div style={{width:"26px",height:"26px",borderRadius:"50%",flexShrink:0,
+              background:"linear-gradient(135deg,rgba(0,229,204,.28),rgba(155,89,255,.28))",
+              border:"1.5px solid var(--cyan)",display:"flex",alignItems:"center",justifyContent:"center",
+              fontFamily:"'Orbitron',sans-serif",fontWeight:"900",fontSize:"11px",color:"var(--cyan)"}}>{
+              initial}
+            </div>
+            <span style={{fontFamily:"'Orbitron',sans-serif",fontWeight:"700",fontSize:"10px",
+              color:"var(--cyan)",letterSpacing:".08em",whiteSpace:"nowrap",userSelect:"none"}}>
+              {playerName||"PROFILE"}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="col g12">
+        {/* Daily Challenge – hero card */}
+        <div className="dcard row ac jb" style={{cursor:'pointer',gap:'12px'}} onClick={onDaily}>
+          <div className="row ac g12" style={{flex:1}}>
+            <span style={{fontSize:'28px'}}>📅</span>
+            <div>
+              <div className="t-head" style={{fontSize:'14px',color:'var(--pur)',marginBottom:'3px'}}>DAILY CHALLENGE</div>
+              <div style={{color:'var(--txtd)',fontSize:'11px',lineHeight:'1.5'}}>Same word for everyone · compete for fewest guesses</div>
+            </div>
+          </div>
+          {dailyDone
+            ?<span className="bdg bv">✓ DONE</span>
+            :<span className="bdg bv ap">NEW!</span>}
+        </div>
+
+        {/* Solo */}
+        <div className="panel" style={{cursor:'pointer',border:'1.5px solid rgba(0,229,204,.26)',padding:'18px'}} onClick={onSolo}>
+          <div className="row ac g12">
+            <span style={{fontSize:'26px'}}>🎯</span>
+            <div style={{flex:1}}>
+              <div className="t-head" style={{fontSize:'14px',color:'var(--cyan)',marginBottom:'3px'}}>SOLO MODE</div>
+              <div style={{color:'var(--txtd)',fontSize:'11px'}}>10 difficulty levels · Letter Tracker · Brainstorm Box</div>
+            </div>
+            <div style={{color:'var(--dim)',fontSize:'18px'}}>›</div>
+          </div>
+        </div>
+
+        {/* Multiplayer */}
+        <div className="panel" style={{cursor:'pointer',border:`1.5px solid rgba(255,201,64,${FB_READY?.26:.12})`,padding:'18px'}} onClick={onMulti}>
+          <div className="row ac g12">
+            <span style={{fontSize:'26px'}}>🌐</span>
+            <div style={{flex:1}}>
+              <div className="t-head" style={{fontSize:'14px',color:'var(--gold)',marginBottom:'3px'}}>MULTIPLAYER ONLINE</div>
+              <div style={{color:'var(--txtd)',fontSize:'11px'}}>Share a room code · set words · race to solve</div>
+              {!FB_READY&&<span className="bdg be" style={{fontSize:'9px',marginTop:'4px'}}>Firebase setup required</span>}
+            </div>
+            <div style={{color:'var(--dim)',fontSize:'18px'}}>›</div>
+          </div>
+        </div>
+
+        {/* How to play */}
+        <div className="panel" style={{padding:'16px'}}>
+          <div className="t-lbl mb10">HOW TO PLAY</div>
+          <div style={{fontSize:'11px',lineHeight:'1.85',color:'var(--txtd)',marginBottom:'14px'}}>
+            A mystery word is chosen. Guess any valid English word (4+ letters) — you receive the
+            <span style={{color:'var(--cyan)',fontWeight:'700'}}> count of shared letters </span>
+            between your guess and the mystery word, matched by frequency. Use the count to narrow
+            down the word. Find the exact word to win!
+          </div>
+
+          {/* Worked example */}
+          <div style={{background:'var(--s2)',border:'1px solid var(--bord)',borderRadius:'9px',padding:'14px'}}>
+            <div style={{fontSize:'10px',letterSpacing:'.14em',textTransform:'uppercase',color:'var(--txtd)',marginBottom:'12px'}}>
+              Worked Example
+            </div>
+
+            {/* Mystery word */}
+            <div className="row ac g10 mb12" style={{flexWrap:'wrap'}}>
+              <span style={{fontSize:'11px',color:'var(--dim)',minWidth:'90px'}}>Mystery word:</span>
+              <div className="row g5">
+                {['A','P','P','L','E'].map((ch,i)=>(
+                  <div key={i} style={{width:'28px',height:'28px',border:'2px solid var(--pur)',
+                    borderRadius:'5px',display:'flex',alignItems:'center',justifyContent:'center',
+                    fontFamily:"'Orbitron',sans-serif",fontWeight:'900',fontSize:'12px',
+                    color:'var(--pur)',background:'rgba(155,89,255,.1)'}}>
+                    {ch}
+                  </div>
+                ))}
+              </div>
+              <span style={{fontSize:'10px',color:'var(--dim)'}}>hidden from the guesser</span>
+            </div>
+
+            {/* Guess 1: PEAL */}
+            <div style={{marginBottom:'10px'}}>
+              <div className="row ac g10" style={{flexWrap:'wrap',marginBottom:'5px'}}>
+                <span style={{fontSize:'11px',color:'var(--dim)',minWidth:'90px'}}>Guess 1:</span>
+                <div className="row g5">
+                  {['P','E','A','L'].map((ch,i)=>(
+                    <div key={i} style={{width:'28px',height:'28px',border:'1.5px solid var(--bord)',
+                      borderRadius:'5px',display:'flex',alignItems:'center',justifyContent:'center',
+                      fontFamily:"'Orbitron',sans-serif",fontWeight:'700',fontSize:'12px',color:'var(--txt)'}}>
+                      {ch}
+                    </div>
+                  ))}
+                </div>
+                <span style={{fontFamily:"'Orbitron',sans-serif",fontWeight:'900',fontSize:'20px',color:'var(--ok)'}}>4</span>
+                <span style={{fontSize:'10px',color:'var(--ok)'}}>shared</span>
+              </div>
+              <div style={{fontSize:'10px',color:'var(--dim)',paddingLeft:'100px',lineHeight:'1.6'}}>
+                P✓ E✓ A✓ L✓ are all in APPLE &mdash; score is <strong style={{color:'var(--ok)'}}>4</strong>
+              </div>
+            </div>
+
+            {/* Guess 2: PAPER */}
+            <div style={{marginBottom:'10px'}}>
+              <div className="row ac g10" style={{flexWrap:'wrap',marginBottom:'5px'}}>
+                <span style={{fontSize:'11px',color:'var(--dim)',minWidth:'90px'}}>Guess 2:</span>
+                <div className="row g5">
+                  {['P','A','P','E','R'].map((ch,i)=>(
+                    <div key={i} style={{width:'28px',height:'28px',border:'1.5px solid var(--bord)',
+                      borderRadius:'5px',display:'flex',alignItems:'center',justifyContent:'center',
+                      fontFamily:"'Orbitron',sans-serif",fontWeight:'700',fontSize:'12px',color:'var(--txt)'}}>
+                      {ch}
+                    </div>
+                  ))}
+                </div>
+                <span style={{fontFamily:"'Orbitron',sans-serif",fontWeight:'900',fontSize:'20px',color:'var(--gold)'}}>4</span>
+                <span style={{fontSize:'10px',color:'var(--gold)'}}>shared</span>
+              </div>
+              <div style={{fontSize:'10px',color:'var(--dim)',paddingLeft:'100px',lineHeight:'1.6'}}>
+                PAPER has P,A,P,E,R &mdash; APPLE has A,P,P,L,E &mdash; shared: P×2, A×1, E×1 = <strong style={{color:'var(--gold)'}}>4</strong>
+              </div>
+            </div>
+
+            {/* Guess 3: APPLE */}
+            <div>
+              <div className="row ac g10" style={{flexWrap:'wrap',marginBottom:'5px'}}>
+                <span style={{fontSize:'11px',color:'var(--dim)',minWidth:'90px'}}>Guess 3:</span>
+                <div className="row g5">
+                  {['A','P','P','L','E'].map((ch,i)=>(
+                    <div key={i} style={{width:'28px',height:'28px',border:'2px solid var(--ok)',
+                      borderRadius:'5px',display:'flex',alignItems:'center',justifyContent:'center',
+                      fontFamily:"'Orbitron',sans-serif",fontWeight:'900',fontSize:'12px',
+                      color:'var(--ok)',background:'rgba(51,255,136,.1)'}}>
+                      {ch}
+                    </div>
+                  ))}
+                </div>
+                <span style={{fontFamily:"'Orbitron',sans-serif",fontWeight:'900',fontSize:'20px',color:'var(--ok)'}}>5</span>
+                <span style={{fontSize:'10px',color:'var(--ok)'}}>✓ CORRECT!</span>
+              </div>
+              <div style={{fontSize:'10px',color:'var(--dim)',paddingLeft:'100px',lineHeight:'1.6'}}>
+                Exact match &mdash; all 5 letters shared with themselves = <strong style={{color:'var(--ok)'}}>5</strong>. Solved!
+              </div>
+            </div>
+
+            <div style={{marginTop:'12px',padding:'9px 12px',background:'rgba(0,229,204,.05)',
+              border:'1px solid rgba(0,229,204,.15)',borderRadius:'7px',fontSize:'10px',
+              color:'var(--txtd)',lineHeight:'1.7'}}>
+              <strong style={{color:'var(--cyan)'}}>Key insight:</strong> Two guesses both scored 4,
+              but for different reasons. PEAL shares P, E, A, L. PAPER shares P×2, A, E.
+              The count alone doesn't tell you <em>which</em> letters &mdash; that&apos;s the puzzle!
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════
+//  ROOT APPLICATION
+// ═══════════════════════════════════════════════════
+function App(){
+  const [screen,setScreen]=useState('home');
+  const [soloLevel,setSoloLevel]=useState(null);
+  const [roomCode,setRoomCode]=useState(null);
+  const [myName,setMyName]=useState('');
+  const [dailyDone,setDailyDone]=useState(false);
+  const [playerName,setPlayerName]=useState(()=>localStorage.getItem('lx_name')||'');
+
+  useEffect(()=>{
+    FB.hasDoneDaily(todayStr()).then(d=>setDailyDone(d));
+    FB.getProfile().then(p=>{if(p?.name)setPlayerName(p.name);});
+  },[]);
+
+  function goHome(dest){
+    setRoomCode(null);
+    if(dest==='leaderboard'){setScreen('leaderboard');return;}
+    setScreen('home');
+    FB.hasDoneDaily(todayStr()).then(d=>setDailyDone(d));
+  }
+
+  function refreshName(){FB.getProfile().then(p=>{if(p?.name)setPlayerName(p.name);});}
+
+  switch(screen){
+    case 'home':        return<Home onSolo={()=>setScreen('solo-lvl')} onMulti={()=>setScreen(FB_READY?'multi-home':'fb-setup')} onDaily={()=>setScreen('daily')} onBoard={()=>setScreen('leaderboard')} onProfile={()=>setScreen('profile')} playerName={playerName} dailyDone={dailyDone}/>;
+    case 'profile':     return<ProfilePage onBack={()=>setScreen('home')} onNameSaved={n=>{setPlayerName(n);FB.hasDoneDaily(todayStr()).then(d=>setDailyDone(d));}}/>;
+    case 'daily':       return<DailyChallenge onBack={goHome} playerName={playerName}/>;
+    case 'leaderboard': return<Leaderboard onBack={()=>setScreen('home')}/>;
+    case 'solo-lvl':    return<LevelSelect onSelect={l=>{setSoloLevel(l);setScreen('solo-game');}} onBack={()=>setScreen('home')}/>;
+    case 'solo-game':   return<SoloGame level={soloLevel} onBack={()=>setScreen('solo-lvl')}/>;
+    case 'fb-setup':    return<FBSetup onBack={()=>setScreen('home')}/>;
+    case 'multi-home':  return<MultiHome onBack={()=>setScreen('home')} onJoin={(c,n)=>{setRoomCode(c);setMyName(n);setScreen('multi-room');}} playerName={playerName}/>;
+    case 'multi-room':  return<MultiCtrl code={roomCode} myName={myName} onBack={()=>setScreen('home')}/>;
+    default:            return null;
+  }
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
